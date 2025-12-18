@@ -12,7 +12,7 @@ export default function SetAvatar() {
   const [avatars, setAvatars] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedAvatar, setSelectedAvatar] = useState(undefined);
-  
+
   const toastOptions = {
     position: "bottom-right",
     autoClose: 8000,
@@ -59,21 +59,21 @@ export default function SetAvatar() {
   useEffect(() => {
     const fetchAvatars = async () => {
       const data = [];
-      const styles = ['avataaars', 'bottts', 'personas', 'initials'];
-      
+      // only graphical styles, no initials
+      const styles = ["avataaars", "bottts", "personas", "bottts"];
+
       for (let i = 0; i < 4; i++) {
         try {
           const seed = Math.random().toString(36).substring(7);
           const style = styles[i];
           const avatarUrl = `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
-          
+
           const image = await axios.get(avatarUrl);
           const base64 = btoa(unescape(encodeURIComponent(image.data)));
           data.push(base64);
         } catch (error) {
           console.error("Error fetching avatar:", error);
-          // Fallback to a simple colored circle if fetch fails
-          const fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="50" fill="#${Math.floor(Math.random()*16777215).toString(16)}"/></svg>`;
+          const fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="50" fill="#4C1D95"/></svg>`;
           const base64 = btoa(fallbackSvg);
           data.push(base64);
         }
@@ -107,13 +107,14 @@ export default function SetAvatar() {
                     selectedAvatar === index ? "selected" : ""
                   }`}
                   key={index}
+                  onClick={() => setSelectedAvatar(index)}
                 >
                   <img
                     src={`data:image/svg+xml;base64,${avatar}`}
                     alt={`avatar-${index}`}
-                    onClick={() => setSelectedAvatar(index)}
                     onError={(e) => {
-                      e.target.src = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI1MCIgZmlsbD0iIzI1RDM2NiIvPjwvc3ZnPg==`;
+                      e.target.src =
+                        "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI1MCIgZmlsbD0iIzQ1MzBKRCIvPjwvc3ZnPg==";
                     }}
                   />
                 </div>
@@ -123,7 +124,10 @@ export default function SetAvatar() {
           <button onClick={setProfilePicture} className="submit-btn">
             Continue
           </button>
-          <button onClick={() => window.location.reload()} className="refresh-btn">
+          <button
+            onClick={() => window.location.reload()}
+            className="refresh-btn"
+          >
             Refresh Avatars
           </button>
           <ToastContainer />
@@ -139,7 +143,7 @@ const Container = styled.div`
   align-items: center;
   flex-direction: column;
   gap: 2rem;
-  background: linear-gradient(135deg, #0B141A 0%, #111B21 100%);
+  background: linear-gradient(135deg, #050816 0%, #020617 100%);
   height: 100vh;
   width: 100vw;
   padding: 2rem;
@@ -155,7 +159,7 @@ const Container = styled.div`
     }
 
     p {
-      color: #8696A0;
+      color: #9ca3af;
       font-size: 1rem;
     }
   }
@@ -164,7 +168,7 @@ const Container = styled.div`
     text-align: center;
 
     h1 {
-      color: #E9EDEF;
+      color: #f9fafb;
       font-size: 2rem;
       font-weight: 600;
       margin-bottom: 0.5rem;
@@ -175,7 +179,7 @@ const Container = styled.div`
     }
 
     p {
-      color: #8696A0;
+      color: #9ca3af;
       font-size: 1rem;
     }
   }
@@ -200,7 +204,7 @@ const Container = styled.div`
       align-items: center;
       transition: all 0.3s ease;
       cursor: pointer;
-      background-color: #202C33;
+      background-color: #020617;
 
       img {
         height: 6rem;
@@ -216,35 +220,35 @@ const Container = styled.div`
       }
 
       &:hover {
-        border: 4px solid #25D366;
+        border: 4px solid #8b5cf6;
         transform: scale(1.05);
       }
     }
 
     .selected {
-      border: 4px solid #25D366;
-      box-shadow: 0 0 20px rgba(37, 211, 102, 0.4);
-      background-color: #2A3942;
+      border: 4px solid #8b5cf6;
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+      background-color: #111827;
     }
   }
 
   .submit-btn {
-    background-color: #25D366;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
     color: white;
     padding: 1rem 3rem;
     border: none;
     font-weight: 600;
     cursor: pointer;
-    border-radius: 0.5rem;
+    border-radius: 999px;
     font-size: 1rem;
     text-transform: uppercase;
     letter-spacing: 0.05rem;
     transition: all 0.3s ease;
 
     &:hover {
-      background-color: #20BD5A;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.6);
     }
 
     @media screen and (max-width: 720px) {
@@ -255,9 +259,9 @@ const Container = styled.div`
 
   .refresh-btn {
     background-color: transparent;
-    color: #8696A0;
+    color: #9ca3af;
     padding: 0.8rem 2rem;
-    border: 2px solid #8696A0;
+    border: 2px solid #4b5563;
     font-weight: 600;
     cursor: pointer;
     border-radius: 0.5rem;
@@ -267,9 +271,9 @@ const Container = styled.div`
     transition: all 0.3s ease;
 
     &:hover {
-      background-color: #2A3942;
-      color: #E9EDEF;
-      border-color: #E9EDEF;
+      background-color: #020617;
+      color: #e5e7eb;
+      border-color: #e5e7eb;
     }
 
     @media screen and (max-width: 720px) {
