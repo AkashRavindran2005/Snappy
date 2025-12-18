@@ -3,10 +3,10 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import styled from "styled-components";
-import { allUsersRoute, host } from "../utils/APIRoutes";
 import ChatContainer from "../components/ChatContainer";
 import Contacts from "../components/Contacts";
 import Welcome from "../components/Welcome";
+import { host, allUsersRoute } from "../utils/APIRoutes";
 
 export default function Chat() {
   const navigate = useNavigate();
@@ -14,80 +14,126 @@ export default function Chat() {
   const [contacts, setContacts] = useState([]);
   const [currentChat, setCurrentChat] = useState(undefined);
   const [currentUser, setCurrentUser] = useState(undefined);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(async () => {
-    if (!localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)) {
-      navigate("/login");
-    } else {
-      setCurrentUser(
-        await JSON.parse(
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const user = JSON.parse(
           localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
-        )
-      );
-    }
-  }, []);
+        );
+        if (!user) {
+          navigate("/login");
+        } else {
+          setCurrentUser(user);
+        }
+      } catch (error) {
+        navigate("/login");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchUser();
+  }, [navigate]);
 
   useEffect(() => {
     if (currentUser) {
-      socket.current = io(host);
+      socket.current = io(host, {
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: 5,
+      });
       socket.current.emit("add-user", currentUser._id);
     }
   }, [currentUser]);
 
-  useEffect(async () => {
-    if (currentUser) {
-      if (currentUser.isAvatarImageSet) {
-        const data = await axios.get(`${allUsersRoute}/${currentUser._id}`);
-        setContacts(data.data);
-      } else {
+  useEffect(() => {
+    const fetchContacts = async () => {
+      if (currentUser && currentUser.isAvatarImageSet) {
+        try {
+          const { data } = await axios.get(`${allUsersRoute}/${currentUser._id}`);
+          setContacts(data);
+        } catch (error) {
+          console.error("Error fetching contacts:", error);
+        }
+      } else if (currentUser && !currentUser.isAvatarImageSet) {
         navigate("/setAvatar");
       }
-    }
-  }, [currentUser]);
+    };
+    fetchContacts();
+  }, [currentUser, navigate]);
 
-  const handleChatChange = (chat) => {
-    setCurrentChat(chat);
-  };
+  if (isLoading) {
+    return <LoadingContainer>Loading...</LoadingContainer>;
+  }
 
   return (
-    <>
-      <Container>
-        <div className="container">
-          <Contacts contacts={contacts} changeChat={handleChatChange} />
-          {currentChat === undefined ? (
-            <Welcome />
-          ) : (
-            <ChatContainer currentChat={currentChat} socket={socket} />
-          )}
-        </div>
-      </Container>
-    </>
+    <Container>
+      <ContentWrapper>
+        <Contacts
+          contacts={contacts}
+          changeChat={(chat) => setCurrentChat(chat)}
+          currentUser={currentUser}
+        />
+        {currentChat === undefined ? (
+          <Welcome currentUser={currentUser} />
+        ) : (
+          <ChatContainer
+            currentChat={currentChat}
+            socket={socket}
+            currentUser={currentUser}
+          />
+        )}
+      </ContentWrapper>
+    </Container>
   );
 }
+
+const LoadingContainer = styled.div`
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 500;
+`;
 
 const Container = styled.div`
   height: 100vh;
   width: 100vw;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 1rem;
   align-items: center;
-  background: #111B21;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  padding: 1rem;
 
-  .container {
-    height: 100vh;
-    width: 100vw;
-    background-color: #0B141A;
-    display: grid;
-    grid-template-columns: 25% 75%;
+  @media (max-width: 768px) {
+    padding: 0;
+  }
+`;
 
-    @media screen and (min-width: 720px) and (max-width: 1080px) {
-      grid-template-columns: 35% 65%;
-    }
+const ContentWrapper = styled.div`
+  height: 100%;
+  width: 100%;
+  max-width: 1600px;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 0;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.1);
 
-    @media screen and (max-width: 720px) {
-      grid-template-columns: 100%;
-    }
+  @media (max-width: 1024px) {
+    grid-template-columns: 250px 1fr;
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    border-radius: 0;
   }
 `;

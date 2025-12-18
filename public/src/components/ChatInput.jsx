@@ -1,399 +1,197 @@
 import React, { useState, useRef } from "react";
-import { BsEmojiSmile, BsImageFill, BsFileEarmarkPlay } from "react-icons/bs";
-import { IoSend } from "react-icons/io5";
-import { HiOutlinePaperClip } from "react-icons/hi";
-import { BsMicFill } from "react-icons/bs";
-import { MdClose } from "react-icons/md";
 import styled from "styled-components";
-import Picker from "emoji-picker-react";
+import { BsPaperclip, BsEmojiSmileFill, BsSend } from "react-icons/bs";
+import EmojiPicker from "emoji-picker-react";
+import axios from "axios";
+import toast from "react-hot-toast";
 
-export default function ChatInput({ handleSendMsg }) {
+export default function ChatInput({ onSendMsg }) {
   const [msg, setMsg] = useState("");
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [filePreview, setFilePreview] = useState(null);
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef();
 
-  const handleEmojiPickerhideShow = () => {
-    setShowEmojiPicker(!showEmojiPicker);
-    setShowAttachMenu(false);
-  };
+  const handleMediaUpload = async (file) => {
+    if (file.size > 500 * 1024 * 1024) {
+      toast.error("File too large");
+      return;
+    }
 
-  const handleAttachMenu = () => {
-    setShowAttachMenu(!showAttachMenu);
-    setShowEmojiPicker(false);
-  };
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("media", file);
 
-  const handleEmojiClick = (event, emojiObject) => {
-    let message = msg;
-    message += emojiObject.emoji;
-    setMsg(message);
-  };
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/api/messages/upload-media`,
+        formData
+      );
 
-  const handleFileSelect = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-      
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setFilePreview({ type: 'image', url: reader.result, name: file.name });
-        };
-        reader.readAsDataURL(file);
-      } else if (file.type.startsWith('video/')) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setFilePreview({ type: 'video', url: reader.result, name: file.name });
-        };
-        reader.readAsDataURL(file);
-      } else {
-        setFilePreview({ type: 'file', name: file.name });
-      }
-      
-      setShowAttachMenu(false);
+      setSelectedFile({
+        url: response.data.mediaUrl,
+        type: response.data.mediaType,
+      });
+      toast.success("Media ready!");
+    } catch (error) {
+      toast.error("Upload failed");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handlePhotoClick = () => {
-    fileInputRef.current.setAttribute('accept', 'image/*');
-    fileInputRef.current.click();
-    setShowAttachMenu(false);
-  };
-
-  const handleVideoClick = () => {
-    fileInputRef.current.setAttribute('accept', 'video/*');
-    fileInputRef.current.click();
-    setShowAttachMenu(false);
-  };
-
-  const handleRemoveFile = () => {
-    setSelectedFile(null);
-    setFilePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const sendChat = (event) => {
-    event.preventDefault();
-    if (msg.length > 0 || selectedFile) {
-      // For now, we'll just send the text message
-      // You'll need to update your backend to handle file uploads
-      if (selectedFile) {
-        const messageWithFile = `${msg} [File: ${selectedFile.name}]`;
-        handleSendMsg(messageWithFile);
-      } else {
-        handleSendMsg(msg);
-      }
+  const handleSend = () => {
+    if (msg.trim() || selectedFile) {
+      onSendMsg({
+        message: msg,
+        mediaUrl: selectedFile?.url,
+        mediaType: selectedFile?.type,
+      });
       setMsg("");
       setSelectedFile(null);
-      setFilePreview(null);
     }
   };
 
   return (
     <Container>
-      {filePreview && (
-        <FilePreviewContainer>
-          <div className="preview-content">
-            {filePreview.type === 'image' && (
-              <img src={filePreview.url} alt="preview" />
-            )}
-            {filePreview.type === 'video' && (
-              <video src={filePreview.url} controls />
-            )}
-            <div className="file-info">
-              <span className="file-name">{filePreview.name}</span>
-              <button onClick={handleRemoveFile} className="remove-btn">
-                <MdClose />
-              </button>
-            </div>
-          </div>
-        </FilePreviewContainer>
+      {selectedFile && (
+        <PreviewBox>
+          <span>{selectedFile.type === "video" ? "📹" : "📷"}</span>
+          <button onClick={() => setSelectedFile(null)}>×</button>
+        </PreviewBox>
       )}
-      
-      <div className="input-wrapper">
-        <div className="button-container">
-          <div className="emoji">
-            <BsEmojiSmile onClick={handleEmojiPickerhideShow} />
-            {showEmojiPicker && <Picker onEmojiClick={handleEmojiClick} />}
-          </div>
-          <div className="attach">
-            <HiOutlinePaperClip onClick={handleAttachMenu} />
-            {showAttachMenu && (
-              <div className="attach-menu">
-                <div className="attach-option" onClick={handlePhotoClick}>
-                  <BsImageFill />
-                  <span>Photo</span>
-                </div>
-                <div className="attach-option" onClick={handleVideoClick}>
-                  <BsFileEarmarkPlay />
-                  <span>Video</span>
-                </div>
-              </div>
-            )}
-          </div>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileSelect}
-            style={{ display: 'none' }}
-          />
-        </div>
-        <form className="input-container" onSubmit={(event) => sendChat(event)}>
-          <input
-            type="text"
-            placeholder="Type a message"
-            onChange={(e) => setMsg(e.target.value)}
-            value={msg}
-          />
-          <button type="submit" className="send-btn">
-            {msg.length > 0 || selectedFile ? <IoSend /> : <BsMicFill />}
-          </button>
-        </form>
-      </div>
+
+      <InputWrapper>
+        <IconButton
+          onClick={() => fileInputRef.current?.click()}
+          disabled={loading}
+        >
+          <BsPaperclip />
+        </IconButton>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          hidden
+          onChange={(e) =>
+            e.target.files?. && handleMediaUpload(e.target.files)
+          }
+          accept="image/*,video/*"
+        />
+
+        <MessageInput
+          type="text"
+          placeholder="Type message..."
+          value={msg}
+          onChange={(e) => setMsg(e.target.value)}
+          onKeyPress={(e) => e.key === "Enter" && handleSend()}
+        />
+
+        <IconButton onClick={() => setShowEmoji(!showEmoji)}>
+          <BsEmojiSmileFill />
+        </IconButton>
+
+        {showEmoji && (
+          <EmojiWrapper>
+            <EmojiPicker onEmojiClick={(e, obj) => setMsg(msg + obj.emoji)} />
+          </EmojiWrapper>
+        )}
+
+        <SendButton onClick={handleSend} disabled={!msg.trim() && !selectedFile}>
+          <BsSend />
+        </SendButton>
+      </InputWrapper>
     </Container>
   );
 }
 
-const FilePreviewContainer = styled.div`
-  background-color: #2A3942;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid rgba(134, 150, 160, 0.15);
+const Container = styled.div`
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.5);
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+`;
 
-  .preview-content {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    background-color: #202C33;
-    padding: 0.8rem;
-    border-radius: 0.5rem;
+const PreviewBox = styled.div`
+  padding: 0.75rem;
+  background: rgba(102, 126, 234, 0.15);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  color: #667eea;
 
-    img, video {
-      max-width: 80px;
-      max-height: 80px;
-      border-radius: 0.3rem;
-      object-fit: cover;
-    }
-
-    .file-info {
-      flex: 1;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
-      .file-name {
-        color: #E9EDEF;
-        font-size: 0.9rem;
-      }
-
-      .remove-btn {
-        background: none;
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.3rem;
-        border-radius: 50%;
-        transition: background-color 0.2s ease;
-
-        &:hover {
-          background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        svg {
-          font-size: 1.3rem;
-          color: #8696A0;
-        }
-      }
-    }
+  button {
+    background: none;
+    border: none;
+    color: #667eea;
+    font-size: 1.5rem;
+    cursor: pointer;
   }
 `;
 
-const Container = styled.div`
-  background-color: #202C33;
+const InputWrapper = styled.div`
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  position: relative;
+`;
 
-  .input-wrapper {
-    display: grid;
-    align-items: center;
-    grid-template-columns: 10% 90%;
-    padding: 0.8rem 1.5rem;
-    gap: 1rem;
+const IconButton = styled.button`
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.5rem;
 
-    @media screen and (min-width: 720px) and (max-width: 1080px) {
-      padding: 0.8rem 1rem;
-      gap: 0.5rem;
-    }
+  &:hover:not(:disabled) {
+    color: #764ba2;
   }
 
-  .button-container {
-    display: flex;
-    align-items: center;
-    color: #8696A0;
-    gap: 1rem;
-
-    .emoji, .attach {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      
-      svg {
-        font-size: 1.5rem;
-        cursor: pointer;
-        transition: color 0.2s ease;
-
-        &:hover {
-          color: #E9EDEF;
-        }
-      }
-    }
-
-    .emoji-picker-react {
-      position: absolute;
-      bottom: 60px;
-      left: 0;
-      background-color: #202C33;
-      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-      border: 1px solid rgba(134, 150, 160, 0.15);
-      border-radius: 0.5rem;
-      z-index: 10;
-
-      .emoji-scroll-wrapper::-webkit-scrollbar {
-        background-color: #2A3942;
-        width: 5px;
-        
-        &-thumb {
-          background-color: #8696A0;
-          border-radius: 5px;
-        }
-      }
-
-      .emoji-categories {
-        button {
-          filter: grayscale(1);
-          
-          &:hover {
-            filter: grayscale(0);
-          }
-        }
-      }
-
-      .emoji-search {
-        background-color: #2A3942;
-        border-color: #8696A0;
-        color: #E9EDEF;
-      }
-
-      .emoji-group:before {
-        background-color: #202C33;
-        color: #E9EDEF;
-      }
-    }
-
-    .attach-menu {
-      position: absolute;
-      bottom: 60px;
-      left: 0;
-      background-color: #202C33;
-      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-      border: 1px solid rgba(134, 150, 160, 0.15);
-      border-radius: 0.5rem;
-      padding: 0.5rem;
-      z-index: 10;
-      min-width: 150px;
-
-      .attach-option {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 0.8rem 1rem;
-        cursor: pointer;
-        border-radius: 0.3rem;
-        transition: background-color 0.2s ease;
-
-        &:hover {
-          background-color: #2A3942;
-        }
-
-        svg {
-          font-size: 1.3rem;
-          color: #25D366;
-        }
-
-        span {
-          color: #E9EDEF;
-          font-size: 0.95rem;
-        }
-      }
-    }
+  &:disabled {
+    opacity: 0.5;
   }
+`;
 
-  .input-container {
-    width: 100%;
-    border-radius: 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    background-color: #2A3942;
+const MessageInput = styled.input`
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 0.75rem;
+  color: #e2e8f0;
 
-    input {
-      width: 90%;
-      height: 2.8rem;
-      background-color: transparent;
-      color: #E9EDEF;
-      border: none;
-      padding-left: 1rem;
-      font-size: 0.95rem;
+  &:focus {
+    outline: none;
+    border-color: #667eea;
+  }
+`;
 
-      &::placeholder {
-        color: #8696A0;
-      }
+const SendButton = styled.button`
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  font-size: 1.1rem;
 
-      &::selection {
-        background-color: #005C4B;
-      }
+  &:disabled {
+    opacity: 0.5;
+  }
+`;
 
-      &:focus {
-        outline: none;
-      }
-    }
+const EmojiWrapper = styled.div`
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  z-index: 1000;
+  margin-bottom: 0.5rem;
 
-    .send-btn {
-      padding: 0.5rem 1.2rem;
-      border-radius: 50%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background-color: transparent;
-      border: none;
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      &:hover {
-        background-color: rgba(37, 211, 102, 0.1);
-      }
-
-      svg {
-        font-size: 1.5rem;
-        color: #8696A0;
-        transition: color 0.2s ease;
-      }
-
-      &:hover svg {
-        color: #25D366;
-      }
-
-      @media screen and (min-width: 720px) and (max-width: 1080px) {
-        padding: 0.3rem 1rem;
-        
-        svg {
-          font-size: 1.2rem;
-        }
-      }
-    }
+  .emoji-picker-react {
+    background: #0f172a !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
   }
 `;

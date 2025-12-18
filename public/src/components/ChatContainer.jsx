@@ -1,68 +1,54 @@
 import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
-import ChatInput from "./ChatInput";
-import Logout from "./Logout";
-import { BsThreeDotsVertical, BsSearch, BsCheck2All } from "react-icons/bs";
-import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
-import { sendMessageRoute, recieveMessageRoute } from "../utils/APIRoutes";
+import { BsThreeDots } from "react-icons/bs";
+import ChatInput from "./ChatInput";
+import {
+  sendMessageRoute,
+  recieveMessageRoute,
+} from "../utils/APIRoutes";
+import toast from "react-hot-toast";
 
-export default function ChatContainer ({ currentChat, socket }) {
+export default function ChatContainer({ currentChat, socket, currentUser }) {
   const [messages, setMessages] = useState([]);
-  const scrollRef = useRef();
   const [arrivalMessage, setArrivalMessage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef();
 
   useEffect(() => {
     const fetchMessages = async () => {
-      const data = await JSON.parse(
-        localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
-      );
-      const response = await axios.post(recieveMessageRoute, {
-        from: data._id,
-        to: currentChat._id,
-      });
-      setMessages(response.data);
-    };
-    fetchMessages();
-  }, [currentChat]);
-
-  useEffect(() => {
-    const getCurrentChat = async () => {
-      if (currentChat) {
-        await JSON.parse(
-          localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
-        )._id;
+      setIsLoading(true);
+      try {
+        const response = await axios.post(recieveMessageRoute, {
+          from: currentUser._id,
+          to: currentChat._id,
+        });
+        setMessages(response.data);
+      } catch (error) {
+        toast.error("Failed to load messages");
+      } finally {
+        setIsLoading(false);
       }
     };
-    getCurrentChat();
-  }, [currentChat]);
 
-  const handleSendMsg = async (msg) => {
-    const data = await JSON.parse(
-      localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
-    );
-    socket.current.emit("send-msg", {
-      to: currentChat._id,
-      from: data._id,
-      msg,
-    });
-    await axios.post(sendMessageRoute, {
-      from: data._id,
-      to: currentChat._id,
-      message: msg,
-    });
-    const msgs = [...messages];
-    msgs.push({ fromSelf: true, message: msg });
-    setMessages(msgs);
-  };
+    if (currentChat) {
+      fetchMessages();
+    }
+  }, [currentChat, currentUser._id]);
 
   useEffect(() => {
     if (socket.current) {
-      socket.current.on("msg-recieve", (msg) => {
-        setArrivalMessage({ fromSelf: false, message: msg });
+      socket.current.on("msg-recieve", (data) => {
+        setArrivalMessage({
+          fromSelf: false,
+          message: data.msg || "",
+          mediaUrl: data.mediaUrl,
+          mediaType: data.mediaType,
+          timestamp: new Date(),
+        });
       });
     }
-  }, []);
+  }, [socket]);
 
   useEffect(() => {
     arrivalMessage && setMessages((prev) => [...prev, arrivalMessage]);
@@ -72,222 +58,224 @@ export default function ChatContainer ({ currentChat, socket }) {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Helper function to check if message contains a file
-  const isFileMessage = (message) => {
-    return message.includes('[File:');
+  const handleSendMsg = async (msgData) => {
+    const { message, mediaUrl, mediaType } = msgData;
+
+    socket.current.emit("send-msg", {
+      to: currentChat._id,
+      from: currentUser._id,
+      msg: message,
+      mediaUrl,
+      mediaType,
+    });
+
+    try {
+      await axios.post(sendMessageRoute, {
+        from: currentUser._id,
+        to: currentChat._id,
+        message,
+        mediaUrl,
+        mediaType,
+      });
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          fromSelf: true,
+          message,
+          mediaUrl,
+          mediaType,
+          timestamp: new Date(),
+        },
+      ]);
+    } catch (error) {
+      toast.error("Failed to send message");
+    }
   };
 
   return (
     <Container>
-      <div className="chat-header">
-        <div className="user-details">
-          <div className="avatar">
-            <img
-              src={`data:image/svg+xml;base64,${currentChat.avatarImage}`}
-              alt=""
-            />
-          </div>
-          <div className="username">
-            <h3>{currentChat.username}</h3>
-            <span className="status">online</span>
-          </div>
-        </div>
-        <div className="header-actions">
-          <BsSearch />
-          <BsThreeDotsVertical />
-          <Logout />
-        </div>
-      </div>
-      <div className="chat-messages">
-        {messages.map((message) => {
-          return (
-            <div ref={scrollRef} key={uuidv4()}>
-              <div
-                className={`message ${
-                  message.fromSelf ? "sended" : "recieved"
-                }`}
-              >
-                <div className="content">
-                  {isFileMessage(message.message) ? (
-                    <div className="file-message">
-                      <p className="file-indicator">📎 {message.message}</p>
-                    </div>
-                  ) : (
-                    <p>{message.message}</p>
-                  )}
-                  <span className="time">
-                    {new Date().toLocaleTimeString('en-US', { 
-                      hour: '2-digit', 
-                      minute: '2-digit',
-                      hour12: true 
-                    })}
-                    {message.fromSelf && <BsCheck2All className="check-icon" />}
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <ChatInput handleSendMsg={handleSendMsg} />
+      <Header>
+        <UserSection>
+          <UserAvatar
+            src={`data:image/svg+xml;base64,${currentChat.avatarImage}`}
+            alt={currentChat.username}
+          />
+          <UserDetails>
+            <UserName>{currentChat.username}</UserName>
+            <UserStatus>Active now</UserStatus>
+          </UserDetails>
+        </UserSection>
+        <BsThreeDots />
+      </Header>
+
+      <MessagesContainer>
+        {isLoading ? (
+          <LoadingMessage>Loading messages...</LoadingMessage>
+        ) : messages.length === 0 ? (
+          <EmptyState>
+            <EmptyIcon>💬</EmptyIcon>
+            <EmptyText>Start the conversation!</EmptyText>
+          </EmptyState>
+        ) : (
+          messages.map((msg, idx) => (
+            <Message key={idx} isSent={msg.fromSelf}>
+              <MessageBubble isSent={msg.fromSelf}>
+                {msg.mediaUrl && (
+                  <>
+                    {msg.mediaType === "video" ? (
+                      <MediaVideo src={msg.mediaUrl} controls />
+                    ) : (
+                      <MediaImage src={msg.mediaUrl} alt="shared" />
+                    )}
+                  </>
+                )}
+                {msg.message && <MessageText>{msg.message}</MessageText>}
+                <Timestamp>
+                  {new Date(msg.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Timestamp>
+              </MessageBubble>
+            </Message>
+          ))
+        )}
+        <div ref={scrollRef} />
+      </MessagesContainer>
+
+      <ChatInput onSendMsg={handleSendMsg} />
     </Container>
   );
 }
 
 const Container = styled.div`
-  display: grid;
-  grid-template-rows: 10% 78% 12%;
-  gap: 0;
-  overflow: hidden;
-  background-color: #0B141A;
-  
-  @media screen and (min-width: 720px) and (max-width: 1080px) {
-    grid-template-rows: 12% 75% 13%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #0f172a;
+`;
+
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(15, 23, 42, 0.5);
+`;
+
+const UserSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
+const UserAvatar = styled.img`
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: 2px solid rgba(102, 126, 234, 0.3);
+`;
+
+const UserDetails = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const UserName = styled.h3`
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 600;
+`;
+
+const UserStatus = styled.p`
+  margin: 0.25rem 0 0 0;
+  color: #10b981;
+  font-size: 0.85rem;
+`;
+
+const MessagesContainer = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const LoadingMessage = styled.div`
+  text-align: center;
+  color: #94a3b8;
+  padding: 2rem;
+`;
+
+const EmptyState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 1rem;
+`;
+
+const EmptyIcon = styled.div`
+  font-size: 3rem;
+  opacity: 0.5;
+`;
+
+const EmptyText = styled.p`
+  color: #64748b;
+  margin: 0;
+`;
+
+const Message = styled.div`
+  display: flex;
+  justify-content: ${(props) => (props.isSent ? "flex-end" : "flex-start")};
+`;
+
+const MessageBubble = styled.div`
+  max-width: 65%;
+  background: ${(props) =>
+    props.isSent
+      ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+      : "rgba(30, 41, 59, 0.8)"};
+  color: ${(props) => (props.isSent ? "#fff" : "#e2e8f0")};
+  padding: 0.75rem 1rem;
+  border-radius: ${(props) =>
+    props.isSent ? "1rem 1rem 0.25rem 1rem" : "1rem 1rem 1rem 0.25rem"};
+  border: 1px solid ${(props) =>
+    props.isSent ? "rgba(255, 255, 255, 0.1)" : "rgba(148, 163, 184, 0.2)"};
+
+  @media (max-width: 768px) {
+    max-width: 85%;
   }
+`;
 
-  .chat-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.8rem 1.5rem;
-    background-color: #202C33;
-    border-bottom: 1px solid rgba(134, 150, 160, 0.15);
+const MediaImage = styled.img`
+  width: 100%;
+  max-height: 300px;
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+`;
 
-    .user-details {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
+const MediaVideo = styled.video`
+  width: 100%;
+  max-height: 300px;
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+`;
 
-      .avatar {
-        img {
-          height: 2.5rem;
-          width: 2.5rem;
-          border-radius: 50%;
-          object-fit: cover;
-        }
-      }
+const MessageText = styled.p`
+  margin: 0;
+  word-break: break-word;
+`;
 
-      .username {
-        display: flex;
-        flex-direction: column;
-        gap: 0.2rem;
-
-        h3 {
-          color: #E9EDEF;
-          font-size: 1.05rem;
-          font-weight: 500;
-          margin: 0;
-        }
-
-        .status {
-          color: #8696A0;
-          font-size: 0.8rem;
-          font-weight: 400;
-        }
-      }
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-
-      svg {
-        font-size: 1.2rem;
-        color: #8696A0;
-        cursor: pointer;
-        transition: color 0.2s ease;
-
-        &:hover {
-          color: #E9EDEF;
-        }
-      }
-    }
-  }
-
-  .chat-messages {
-    padding: 1.5rem 8%;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    overflow: auto;
-    background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iYSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjMwIiBoZWlnaHQ9IjMwIj48cGF0aCBkPSJNMCAwaDMwdjMwSDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTAgMGgxdjFIMHoiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wMykiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjYSkiLz48L3N2Zz4=');
-    
-    &::-webkit-scrollbar {
-      width: 0.4rem;
-    }
-    
-    &::-webkit-scrollbar-thumb {
-      background-color: rgba(134, 150, 160, 0.3);
-      border-radius: 1rem;
-    }
-
-    .message {
-      display: flex;
-      align-items: flex-end;
-      margin-bottom: 0.3rem;
-
-      .content {
-        max-width: 65%;
-        overflow-wrap: break-word;
-        padding: 0.5rem 0.8rem;
-        font-size: 0.95rem;
-        border-radius: 0.5rem;
-        position: relative;
-        box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
-
-        p {
-          margin: 0;
-          color: #E9EDEF;
-          line-height: 1.4;
-          padding-right: 4rem;
-        }
-
-        .file-message {
-          .file-indicator {
-            color: #25D366;
-            font-size: 0.9rem;
-          }
-        }
-
-        .time {
-          position: absolute;
-          bottom: 0.3rem;
-          right: 0.6rem;
-          font-size: 0.7rem;
-          color: #8696A0;
-          display: flex;
-          align-items: center;
-          gap: 0.25rem;
-
-          .check-icon {
-            font-size: 1rem;
-            color: #53BDEB;
-          }
-        }
-
-        @media screen and (min-width: 720px) and (max-width: 1080px) {
-          max-width: 80%;
-        }
-      }
-    }
-
-    .sended {
-      justify-content: flex-end;
-
-      .content {
-        background-color: #005C4B;
-        border-radius: 0.5rem 0.5rem 0 0.5rem;
-      }
-    }
-
-    .recieved {
-      justify-content: flex-start;
-
-      .content {
-        background-color: #202C33;
-        border-radius: 0.5rem 0.5rem 0.5rem 0;
-      }
-    }
-  }
+const Timestamp = styled.span`
+  display: block;
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-top: 0.25rem;
+  text-align: right;
 `;
