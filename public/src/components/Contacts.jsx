@@ -1,25 +1,47 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import { BsSearch, BsCircleFill } from "react-icons/bs";
+import { BsSearch } from "react-icons/bs";
 import { BiLogOut } from "react-icons/bi";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function Contacts({ contacts, changeChat, currentUser }) {
   const navigate = useNavigate();
   const [currentSelected, setCurrentSelected] = useState(undefined);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredContacts, setFilteredContacts] = useState(contacts);
+  const [friends, setFriends] = useState([]);
+  const [filteredContacts, setFilteredContacts] = useState([]);
 
+  // Load friends list from backend instead of using all users
+  useEffect(() => {
+    const fetchFriends = async () => {
+      if (!currentUser) return;
+      try {
+        const { data } = await axios.get(
+          `${process.env.REACT_APP_API_URL}/api/friends/list/${currentUser._id}`
+        );
+        setFriends(data);
+        setFilteredContacts(data);
+      } catch (err) {
+        console.error("Error fetching friends:", err);
+      }
+    };
+    fetchFriends();
+  }, [currentUser]);
+
+  // Filter by search
   useEffect(() => {
     if (searchQuery.trim() === "") {
-      setFilteredContacts(contacts);
+      setFilteredContacts(friends);
     } else {
-      const filtered = contacts.filter((contact) =>
-        contact.username.toLowerCase().includes(searchQuery.toLowerCase())
+      const q = searchQuery.toLowerCase();
+      setFilteredContacts(
+        friends.filter((contact) =>
+          contact.username.toLowerCase().includes(q)
+        )
       );
-      setFilteredContacts(filtered);
     }
-  }, [searchQuery, contacts]);
+  }, [searchQuery, friends]);
 
   const changeCurrentChat = (index, contact) => {
     setCurrentSelected(index);
@@ -46,7 +68,7 @@ export default function Contacts({ contacts, changeChat, currentUser }) {
         </SearchIcon>
         <SearchInput
           type="text"
-          placeholder="Search contacts..."
+          placeholder="Search friends..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -68,12 +90,12 @@ export default function Contacts({ contacts, changeChat, currentUser }) {
             </AvatarWrapper>
             <ContactInfo>
               <ContactName>{contact.username}</ContactName>
-              <ContactStatus>Active</ContactStatus>
+              <ContactStatus>Friend</ContactStatus>
             </ContactInfo>
           </ContactItem>
         ))}
         {filteredContacts.length === 0 && (
-          <NoContacts>No contacts found</NoContacts>
+          <NoContacts>No friends yet. Add someone first.</NoContacts>
         )}
       </ContactsList>
 
@@ -170,8 +192,8 @@ const ContactItem = styled.div`
   cursor: pointer;
   background: ${(props) =>
     props.isSelected ? "rgba(102, 126, 234, 0.15)" : "transparent"};
-  border-left: 3px solid ${(props) =>
-    props.isSelected ? "#667eea" : "transparent"};
+  border-left: 3px solid
+    ${(props) => (props.isSelected ? "#667eea" : "transparent")};
   transition: all 0.2s ease;
 
   &:hover {

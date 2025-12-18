@@ -7,13 +7,14 @@ require("dotenv").config();
 
 const authRoutes = require("./routes/auth");
 const messageRoutes = require("./routes/messages");
+const friendRoutes = require("./routes/friends"); // NEW
 
 const app = express();
 
 // CORS for Vercel frontend
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "https://your-frontend.vercel.app",
+    origin: process.env.CORS_ORIGIN || "https://snappy-rosy-omega.vercel.app",
     credentials: true,
   })
 );
@@ -41,6 +42,7 @@ app.get("/ping", (_req, res) => {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/friends", friendRoutes); // NEW
 
 // Global error handler (optional but recommended)
 app.use((err, _req, res, _next) => {
@@ -57,7 +59,7 @@ const server = app.listen(PORT, () =>
 // Socket.io
 const io = socketIO(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "https://snappy-rosy-omega.vercel.app/",
+    origin: process.env.CORS_ORIGIN || "https://snappy-rosy-omega.vercel.app",
     methods: ["GET", "POST"],
     credentials: true,
   },
