@@ -33,13 +33,11 @@ export default function Welcome() {
                 <stop offset="100%" style={{ stopColor: "#128C7E", stopOpacity: 1 }} />
               </linearGradient>
             </defs>
-            {/* Main chat bubble */}
             <path
               d="M100 20 C145 20 180 50 180 90 C180 130 145 160 100 160 L40 160 L50 180 L40 160 C30 160 20 150 20 90 C20 50 55 20 100 20 Z"
               fill="url(#gradient)"
               opacity="0.9"
             />
-            {/* Message lines */}
             <line x1="50" y1="70" x2="150" y2="70" stroke="white" strokeWidth="6" strokeLinecap="round" />
             <line x1="50" y1="90" x2="130" y2="90" stroke="white" strokeWidth="6" strokeLinecap="round" />
             <line x1="50" y1="110" x2="140" y2="110" stroke="white" strokeWidth="6" strokeLinecap="round" />
@@ -50,7 +48,7 @@ export default function Welcome() {
           <h1>
             <span className="wave">👋</span> Welcome{userName && `, ${userName}`}!
           </h1>
-          <p className="subtitle">Select a contact to start messaging</p>
+          <p className="subtitle">Select a contact on the left to start messaging.</p>
         </div>
 
         <div className="features">
@@ -73,21 +71,19 @@ export default function Welcome() {
             <span>Stay connected</span>
           </div>
         </div>
-
-  
       </div>
     </Container>
   );
 }
 
 const Container = styled.div`
+  height: 100%;
+  width: 100%;
+  background-color: #0b141a;
   display: flex;
   justify-content: center;
   align-items: center;
-  color: #E9EDEF;
-  flex-direction: column;
-  background-color: #0B141A;
-  height: 100%;
+  color: #e9edef;
   padding: 2rem;
 
   .welcome-content {
@@ -95,7 +91,7 @@ const Container = styled.div`
     flex-direction: column;
     align-items: center;
     text-align: center;
-    max-width: 600px;
+    max-width: 640px;
     animation: fadeIn 0.6s ease-in;
 
     @keyframes fadeIn {
@@ -110,7 +106,7 @@ const Container = styled.div`
     }
 
     .icon-container {
-      margin-bottom: 2rem;
+      margin-bottom: 2.2rem;
       animation: float 3s ease-in-out infinite;
 
       @keyframes float {
@@ -135,13 +131,13 @@ const Container = styled.div`
     }
 
     .text-content {
-      margin-bottom: 3rem;
+      margin-bottom: 2.5rem;
 
       h1 {
-        font-size: 2.2rem;
+        font-size: 2.1rem;
         font-weight: 300;
-        margin-bottom: 0.8rem;
-        color: #E9EDEF;
+        margin-bottom: 0.7rem;
+        color: #e9edef;
         line-height: 1.3;
 
         .wave {
@@ -173,55 +169,54 @@ const Container = styled.div`
       }
 
       .subtitle {
-        font-size: 1.1rem;
-        color: #8696A0;
+        font-size: 1rem;
+        color: #8696a0;
         font-weight: 300;
       }
     }
 
     .features {
       display: flex;
-      gap: 3rem;
-      margin-bottom: 2rem;
+      gap: 2.5rem;
       flex-wrap: wrap;
       justify-content: center;
 
       @media screen and (max-width: 720px) {
-        gap: 2rem;
+        gap: 1.8rem;
       }
 
       .feature {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 0.8rem;
-        color: #8696A0;
+        gap: 0.7rem;
+        color: #8696a0;
         font-size: 0.9rem;
         transition: all 0.3s ease;
 
         &:hover {
-          color: #E9EDEF;
-          transform: translateY(-5px);
+          color: #e9edef;
+          transform: translateY(-4px);
 
           .feature-icon {
-            background-color: rgba(37, 211, 102, 0.2);
-            color: #25D366;
+            background-color: rgba(37, 211, 102, 0.16);
+            color: #25d366;
           }
         }
 
         .feature-icon {
-          width: 60px;
-          height: 60px;
+          width: 56px;
+          height: 56px;
           border-radius: 50%;
-          background-color: #202C33;
+          background-color: #202c33;
           display: flex;
           align-items: center;
           justify-content: center;
           transition: all 0.3s ease;
 
           svg {
-            font-size: 1.8rem;
-            color: #25D366;
+            font-size: 1.7rem;
+            color: #25d366;
           }
         }
       }

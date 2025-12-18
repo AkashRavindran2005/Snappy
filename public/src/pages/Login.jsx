@@ -9,6 +9,7 @@ import { loginRoute } from "../utils/APIRoutes";
 export default function Login() {
   const navigate = useNavigate();
   const [values, setValues] = useState({ username: "", password: "" });
+
   const toastOptions = {
     position: "bottom-right",
     autoClose: 8000,
@@ -21,7 +22,7 @@ export default function Login() {
     if (localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)) {
       navigate("/");
     }
-  }, []);
+  }, [navigate]);
 
   const handleChange = (event) => {
     setValues({ ...values, [event.target.name]: event.target.value });
@@ -62,9 +63,9 @@ export default function Login() {
 
   return (
     <>
-      <FormContainer>
-        <form onSubmit={(event) => handleSubmit(event)}>
-          <div className="brand">
+      <Outer>
+        <Card>
+          <Brand>
             <div className="logo">
               <svg viewBox="0 0 50 50" width="60" height="60">
                 <circle cx="25" cy="25" r="23" fill="#25D366" />
@@ -76,143 +77,139 @@ export default function Login() {
             </div>
             <h1>SNAPPY</h1>
             <p>Sign in to continue</p>
-          </div>
-          <input
-            type="text"
-            placeholder="Username"
-            name="username"
-            onChange={(e) => handleChange(e)}
-            min="3"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            name="password"
-            onChange={(e) => handleChange(e)}
-          />
-          <button type="submit">Sign In</button>
-          <span>
-            Don't have an account? <Link to="/register">Sign Up</Link>
-          </span>
-        </form>
-      </FormContainer>
+          </Brand>
+
+          <form onSubmit={handleSubmit}>
+            <input
+              type="text"
+              placeholder="Username"
+              name="username"
+              onChange={handleChange}
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              name="password"
+              onChange={handleChange}
+            />
+            <button type="submit">Sign In</button>
+            <span>
+              Don&apos;t have an account? <Link to="/register">Sign Up</Link>
+            </span>
+          </form>
+        </Card>
+      </Outer>
       <ToastContainer />
     </>
   );
 }
 
-const FormContainer = styled.div`
+const Outer = styled.div`
   height: 100vh;
   width: 100vw;
+  background: #0b141a;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 1rem;
   align-items: center;
-  background: linear-gradient(135deg, #0B141A 0%, #111B21 100%);
+  justify-content: center;
+`;
 
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    justify-content: center;
-    flex-direction: column;
-    margin-bottom: 2rem;
+const Card = styled.div`
+  background: #111b21;
+  border-radius: 1.2rem;
+  padding: 3rem 4rem;
+  min-width: 380px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+  border: 1px solid #202c33;
 
-    .logo {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    h1 {
-      color: #E9EDEF;
-      text-transform: uppercase;
-      font-size: 1.8rem;
-      font-weight: 600;
-      letter-spacing: 0.1rem;
-      margin: 0.5rem 0 0 0;
-    }
-
-    p {
-      color: #8696A0;
-      font-size: 0.95rem;
-      margin: 0.3rem 0 0 0;
-    }
+  @media (max-width: 720px) {
+    min-width: 90vw;
+    padding: 2.2rem;
   }
 
   form {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-    background-color: #202C33;
-    border-radius: 1rem;
-    padding: 3rem 4rem;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    min-width: 400px;
+    gap: 1.3rem;
+  }
 
-    @media screen and (max-width: 720px) {
-      min-width: 90vw;
-      padding: 2rem;
+  input {
+    background-color: #202c33;
+    padding: 0.9rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid transparent;
+    color: #e9edef;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: #25d366;
+      background-color: #111b21;
     }
 
-    input {
-      background-color: #2A3942;
-      padding: 1rem;
-      border: 2px solid transparent;
-      border-radius: 0.5rem;
-      color: #E9EDEF;
-      width: 100%;
-      font-size: 1rem;
-      transition: all 0.3s ease;
-
-      &:focus {
-        border: 2px solid #25D366;
-        outline: none;
-        background-color: #111B21;
-      }
-
-      &::placeholder {
-        color: #8696A0;
-      }
+    &::placeholder {
+      color: #8696a0;
     }
+  }
 
-    button {
-      background-color: #25D366;
-      color: white;
-      padding: 1rem 2rem;
-      border: none;
+  button {
+    margin-top: 0.4rem;
+    background-color: #25d366;
+    color: #ffffff;
+    padding: 0.9rem 1.2rem;
+    border-radius: 999px;
+    border: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.05rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: #20bd5a;
+      box-shadow: 0 4px 16px rgba(37, 211, 102, 0.35);
+      transform: translateY(-1px);
+    }
+  }
+
+  span {
+    margin-top: 0.4rem;
+    font-size: 0.85rem;
+    color: #8696a0;
+    text-align: center;
+
+    a {
+      color: #25d366;
       font-weight: 600;
-      cursor: pointer;
-      border-radius: 0.5rem;
-      font-size: 1rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05rem;
-      transition: all 0.3s ease;
+      text-decoration: none;
 
       &:hover {
-        background-color: #20BD5A;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+        text-decoration: underline;
+        color: #20bd5a;
       }
     }
+  }
+`;
 
-    span {
-      color: #8696A0;
-      text-align: center;
-      font-size: 0.9rem;
+const Brand = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 1.8rem;
 
-      a {
-        color: #25D366;
-        text-decoration: none;
-        font-weight: 600;
-        transition: color 0.2s ease;
+  h1 {
+    color: #e9edef;
+    text-transform: uppercase;
+    font-size: 1.6rem;
+    letter-spacing: 0.15rem;
+    margin: 0.3rem 0 0;
+  }
 
-        &:hover {
-          color: #20BD5A;
-          text-decoration: underline;
-        }
-      }
-    }
+  p {
+    color: #8696a0;
+    font-size: 0.9rem;
+    margin: 0;
   }
 `;
