@@ -8,9 +8,10 @@ import toast from "react-hot-toast";
 
 export default function ChatInput({ handleSendMsg, onSendMsg }) {
   const sendFn = onSendMsg || ((d) => handleSendMsg && handleSendMsg(d));
+
   const [msg, setMsg] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null); // { url, type, name }
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
 
@@ -20,30 +21,40 @@ export default function ChatInput({ handleSendMsg, onSendMsg }) {
     setMsg((prev) => prev + (emojiObject?.emoji || ""));
   };
 
+  // Cloudinary upload
   const handleMediaUpload = async (file) => {
     if (!file) return;
     if (file.size > 50 * 1024 * 1024) {
       toast.error("Max 50MB");
       return;
     }
+
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append("media", file);
-      const { data } = await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/messages/upload-media`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
+      formData.append("file", file);
+      formData.append(
+        "upload_preset",
+        process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET
       );
+
+      const cloudName = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
+      const { data } = await axios.post(
+        `https://api.cloudinary.com/v1_1/${cloudName}/${
+          file.type.startsWith("video") ? "video" : "image"
+        }/upload`,
+        formData
+      );
+
       setSelectedFile({
-        url: data.mediaUrl,
-        type: data.mediaType,
+        url: data.secure_url,
+        type: file.type.startsWith("video") ? "video" : "image",
         name: file.name,
       });
-      toast.success("Media uploaded");
+      toast.success("Media ready to send");
     } catch (err) {
       console.error(err);
-      toast.error("Upload failed");
+      toast.error("Cloud upload failed");
     } finally {
       setUploading(false);
     }
@@ -80,9 +91,13 @@ export default function ChatInput({ handleSendMsg, onSendMsg }) {
           <div className="emoji">
             <BsEmojiSmileFill onClick={toggleEmojiPicker} />
             {showEmojiPicker && (
-              <div className="emoji-picker-react-wrapper">
-                <Picker onEmojiClick={handleEmojiClick} disableSearchBar disableSkinTonePicker />
-              </div>
+              <EmojiPopover>
+                <Picker
+                  onEmojiClick={handleEmojiClick}
+                  disableSearchBar
+                  disableSkinTonePicker
+                />
+              </EmojiPopover>
             )}
           </div>
         </div>
@@ -120,8 +135,8 @@ export default function ChatInput({ handleSendMsg, onSendMsg }) {
 const Container = styled.div`
   display: flex;
   flex-direction: column;
-  background-color: #080420;
-  padding: 0 2rem 1rem 2rem;
+  background-color: #050019;
+  padding: 0 2rem 1.2rem 2rem;
 
   @media screen and (min-width: 720px) and (max-width: 1080px) {
     padding: 0 1rem 1rem 1rem;
@@ -141,23 +156,11 @@ const Container = styled.div`
 
     .emoji {
       position: relative;
+
       svg {
         font-size: 1.5rem;
         color: #ffff00c8;
         cursor: pointer;
-      }
-
-      .emoji-picker-react-wrapper {
-        position: absolute;
-        bottom: 150%;
-        left: 0;
-        z-index: 100;
-
-        .emoji-picker-react {
-          background-color: #080420;
-          box-shadow: 0 5px 10px #9a86f3;
-          border-color: #9a86f3;
-        }
       }
     }
   }
@@ -168,8 +171,8 @@ const Container = styled.div`
     display: flex;
     align-items: center;
     gap: 1rem;
-    background-color: #ffffff34;
-    padding: 0.3rem 1rem;
+    background-color: #ffffff20;
+    padding: 0.35rem 1rem;
 
     .attach {
       cursor: pointer;
@@ -185,12 +188,12 @@ const Container = styled.div`
       background-color: transparent;
       color: white;
       border: none;
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       &::selection {
         background-color: #9a86f3;
       }
       &::placeholder {
-        color: #d1d5db;
+        color: #cbd5f5;
       }
       &:focus {
         outline: none;
@@ -208,7 +211,7 @@ const Container = styled.div`
       cursor: pointer;
 
       svg {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         color: white;
       }
 
@@ -219,6 +222,18 @@ const Container = styled.div`
         }
       }
     }
+  }
+`;
+
+const EmojiPopover = styled.div`
+  position: absolute;
+  bottom: 140%;
+  left: 0;
+  z-index: 100;
+  .emoji-picker-react {
+    background-color: #080420;
+    box-shadow: 0 5px 12px #000;
+    border-color: #9a86f3;
   }
 `;
 
