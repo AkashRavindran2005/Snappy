@@ -14,6 +14,10 @@ module.exports.getMessages = async (req, res, next) => {
       return {
         fromSelf: msg.sender.toString() === from,
         message: msg.message.text,
+        messageType: msg.message.type || 'text',
+        fileUrl: msg.message.fileUrl || null,
+        fileName: msg.message.fileName || null,
+        timestamp: msg.createdAt,
       };
     });
     res.json(projectedMessages);
@@ -24,9 +28,15 @@ module.exports.getMessages = async (req, res, next) => {
 
 module.exports.addMessage = async (req, res, next) => {
   try {
-    const { from, to, message } = req.body;
+    const { from, to, message, messageType, fileUrl, fileName } = req.body;
+
     const data = await Messages.create({
-      message: { text: message },
+      message: { 
+        text: message || '',
+        type: messageType || 'text',
+        fileUrl: fileUrl || null,
+        fileName: fileName || null,
+      },
       users: [from, to],
       sender: from,
     });

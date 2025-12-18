@@ -4,6 +4,9 @@ const MessageSchema = mongoose.Schema(
   {
     message: {
       text: { type: String, required: true },
+      type: { type: String, default: 'text' }, 
+      fileUrl: { type: String, default: null },
+      fileName: { type: String, default: null },
     },
     users: Array,
     sender: {

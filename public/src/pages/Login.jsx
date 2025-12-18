@@ -74,7 +74,7 @@ export default function Login() {
                 />
               </svg>
             </div>
-            <h1>CHAT APP</h1>
+            <h1>SNAPPY</h1>
             <p>Sign in to continue</p>
           </div>
           <input

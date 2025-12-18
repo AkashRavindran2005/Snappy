@@ -97,7 +97,7 @@ export default function Register() {
                 />
               </svg>
             </div>
-            <h1>CHAT APP</h1>
+            <h1>SNAPPY</h1>
             <p>Create your account</p>
           </div>
           <input
