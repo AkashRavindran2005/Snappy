@@ -49,9 +49,18 @@ async function encryptForUser(publicKeyBase64, plaintext) {
   return btoa(String.fromCharCode(...new Uint8Array(ciphertext)));
 }
 
+// simple heuristic so old plaintext messages are not passed to atob()
+function looksBase64(str) {
+  return (
+    typeof str === "string" &&
+    str.length > 40 &&
+    /^[A-Za-z0-9+/=]+$/.test(str)
+  );
+}
+
 async function decryptMyMessage(cipherBase64) {
   const privateKeyBase64 = localStorage.getItem("e2ee_private_key");
-  if (!privateKeyBase64) return cipherBase64; // fallback
+  if (!privateKeyBase64 || !looksBase64(cipherBase64)) return cipherBase64;
   try {
     const privKey = await importPrivateKey(privateKeyBase64);
     const cipherBuf = base64ToArrayBuffer(cipherBase64);
@@ -86,9 +95,7 @@ export default function ChatContainer({ currentChat, socket, currentUser }) {
         const decrypted = await Promise.all(
           response.data.map(async (msg) => ({
             ...msg,
-            message: msg.message
-              ? await decryptMyMessage(msg.message)
-              : "",
+            message: msg.message ? await decryptMyMessage(msg.message) : "",
           }))
         );
 
@@ -109,9 +116,7 @@ export default function ChatContainer({ currentChat, socket, currentUser }) {
   useEffect(() => {
     if (socket.current) {
       socket.current.on("msg-recieve", async (data) => {
-        const decryptedText = data.msg
-          ? await decryptMyMessage(data.msg)
-          : "";
+        const decryptedText = data.msg ? await decryptMyMessage(data.msg) : "";
         setArrivalMessage({
           fromSelf: false,
           message: decryptedText,
@@ -136,7 +141,6 @@ export default function ChatContainer({ currentChat, socket, currentUser }) {
   const handleSendMsg = async (plainText) => {
     const mediaUrl = null;
     const mediaType = null;
-    console.log("SENDING", { plainText, ciphertext });
 
     // encrypt with recipient's public key if available
     const recipientPublicKey = currentChat.publicKey || "";
@@ -148,6 +152,8 @@ export default function ChatContainer({ currentChat, socket, currentUser }) {
     } catch (e) {
       console.error("encrypt error", e);
     }
+
+    console.log("SENDING", { plainText, ciphertext });
 
     // send encrypted over socket
     socket.current.emit("send-msg", {
@@ -188,7 +194,9 @@ export default function ChatContainer({ currentChat, socket, currentUser }) {
     <Container>
       <Header>
         <UserSection>
-          <UserAvatar src={`data:image/svg+xml;base64,${currentChat.avatarImage}`} />
+          <UserAvatar
+            src={`data:image/svg+xml;base64,${currentChat.avatarImage}`}
+          />
           <UserDetails>
             <UserName>{currentChat.username}</UserName>
             <UserStatus>Active now</UserStatus>
