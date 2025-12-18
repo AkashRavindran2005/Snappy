@@ -58,40 +58,42 @@ export default function ChatContainer({ currentChat, socket, currentUser }) {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendMsg = async (msgData) => {
-    const { message, mediaUrl, mediaType } = msgData;
+ const handleSendMsg = async (message) => {
+  const mediaUrl = null;
+  const mediaType = null;
 
-    socket.current.emit("send-msg", {
-      to: currentChat._id,
+  socket.current.emit("send-msg", {
+    to: currentChat._id,
+    from: currentUser._id,
+    msg: message,
+    mediaUrl,
+    mediaType,
+  });
+
+  try {
+    await axios.post(sendMessageRoute, {
       from: currentUser._id,
-      msg: message,
+      to: currentChat._id,
+      message,
       mediaUrl,
       mediaType,
     });
 
-    try {
-      await axios.post(sendMessageRoute, {
-        from: currentUser._id,
-        to: currentChat._id,
+    setMessages((prev) => [
+      ...prev,
+      {
+        fromSelf: true,
         message,
         mediaUrl,
         mediaType,
-      });
+        timestamp: new Date(),
+      },
+    ]);
+  } catch (error) {
+    toast.error("Failed to send message");
+  }
+};
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          fromSelf: true,
-          message,
-          mediaUrl,
-          mediaType,
-          timestamp: new Date(),
-        },
-      ]);
-    } catch (error) {
-      toast.error("Failed to send message");
-    }
-  };
 
   return (
     <Container>
@@ -144,7 +146,7 @@ export default function ChatContainer({ currentChat, socket, currentUser }) {
         <div ref={scrollRef} />
       </MessagesContainer>
 
-      <ChatInput onSendMsg={handleSendMsg} />
+      <ChatInput handleSendMsg={handleSendMsg} />
     </Container>
   );
 }
