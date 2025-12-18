@@ -77,6 +77,8 @@ async function decryptMyMessage(cipherBase64) {
 }
 
 export default function ChatContainer({ currentChat, socket, currentUser }) {
+  console.log("ChatContainer currentChat =", currentChat);
+  console.log("ChatContainer recipientPublicKey =", currentChat?.publicKey);
   const [messages, setMessages] = useState([]);
   const [arrivalMessage, setArrivalMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
