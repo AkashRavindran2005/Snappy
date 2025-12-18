@@ -10,8 +10,9 @@ module.exports.login = async (req, res, next) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid)
       return res.json({ msg: "Incorrect Username or Password", status: false });
-    delete user.password;
-    return res.json({ status: true, user });
+    const userObj = user.toObject();
+    delete userObj.password;
+    return res.json({ status: true, user: userObj });
   } catch (ex) {
     next(ex);
   }
@@ -32,8 +33,9 @@ module.exports.register = async (req, res, next) => {
       username,
       password: hashedPassword,
     });
-    delete user.password;
-    return res.json({ status: true, user });
+    const userObj = user.toObject();
+    delete userObj.password;
+    return res.json({ status: true, user: userObj });
   } catch (ex) {
     next(ex);
   }
@@ -79,6 +81,27 @@ module.exports.logOut = (req, res, next) => {
     if (!req.params.id) return res.json({ msg: "User id is required " });
     onlineUsers.delete(req.params.id);
     return res.status(200).send();
+  } catch (ex) {
+    next(ex);
+  }
+};
+
+// NEW: get user by username for friend-requests
+module.exports.getUserByUsername = async (req, res, next) => {
+  try {
+    const { username } = req.query;
+    if (!username) {
+      return res.status(400).json({ error: "Username is required" });
+    }
+
+    const user = await User.findOne({ username }).select(
+      "_id username avatarImage"
+    );
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    return res.json(user);
   } catch (ex) {
     next(ex);
   }
