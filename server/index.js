@@ -7,7 +7,8 @@ require("dotenv").config();
 
 const authRoutes = require("./routes/auth");
 const messageRoutes = require("./routes/messages");
-const friendRoutes = require("./routes/friends"); // NEW
+const friendRoutes = require("./routes/friends");
+const groupRoutes = require("./routes/groups"); // NEW
 
 const app = express();
 
@@ -42,7 +43,8 @@ app.get("/ping", (_req, res) => {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
-app.use("/api/friends", friendRoutes); // NEW
+app.use("/api/friends", friendRoutes);
+app.use("/api/groups", groupRoutes); // NEW
 
 // Global error handler (optional but recommended)
 app.use((err, _req, res, _next) => {
@@ -72,6 +74,7 @@ io.on("connection", (socket) => {
     onlineUsers.set(userId, socket.id);
   });
 
+  // direct messages
   socket.on("send-msg", (data) => {
     const sendUserSocket = onlineUsers.get(data.to);
     if (sendUserSocket) {
@@ -81,6 +84,25 @@ io.on("connection", (socket) => {
         mediaType: data.mediaType || null,
       });
     }
+  });
+
+  // NEW: group messages – broadcast to all member userIds in data.members
+  socket.on("send-group-msg", (data) => {
+    const { groupId, members, msg, mediaUrl, mediaType, from } = data;
+    if (!Array.isArray(members)) return;
+
+    members.forEach((userId) => {
+      const userSocket = onlineUsers.get(userId);
+      if (userSocket) {
+        io.to(userSocket).emit("group-msg-receive", {
+          groupId,
+          from,
+          msg: msg || "",
+          mediaUrl: mediaUrl || null,
+          mediaType: mediaType || null,
+        });
+      }
+    });
   });
 
   socket.on("disconnect", () => {

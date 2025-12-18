@@ -64,6 +64,13 @@ export default function Chat() {
     fetchContacts();
   }, [currentUser, navigate]);
 
+  const handleLogout = () => {
+    // clear only your app key if you want:
+    // localStorage.removeItem(process.env.REACT_APP_LOCALHOST_KEY);
+    localStorage.clear();
+    navigate("/login");
+  };
+
   if (isLoading) {
     return <LoadingContainer>Loading...</LoadingContainer>;
   }
@@ -71,6 +78,8 @@ export default function Chat() {
   return (
     <Container>
       <ContentWrapper>
+        <LogoutButton onClick={handleLogout}>Logout</LogoutButton>
+
         <Contacts
           contacts={contacts}
           changeChat={(chat) => setCurrentChat(chat)}
@@ -127,6 +136,7 @@ const ContentWrapper = styled.div`
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
   background: #0f172a;
   border: 1px solid rgba(148, 163, 184, 0.1);
+  position: relative;
 
   @media (max-width: 1024px) {
     grid-template-columns: 250px 1fr;
@@ -136,4 +146,19 @@ const ContentWrapper = styled.div`
     grid-template-columns: 1fr;
     border-radius: 0;
   }
+`;
+
+const LogoutButton = styled.button`
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 0.6rem;
+  border: none;
+  background-color: #ef4444;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  z-index: 10;
 `;

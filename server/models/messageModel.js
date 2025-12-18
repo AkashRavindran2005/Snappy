@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const MessageSchema = mongoose.Schema(
+const MessageSchema = new mongoose.Schema(
   {
     message: {
       text: { type: String, default: "" },
@@ -14,18 +14,27 @@ const MessageSchema = mongoose.Schema(
     users: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
+        ref: "Users",
       },
     ],
     sender: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Users",
       required: true,
     },
     recipient: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Users",
       required: true,
+    },
+    isGroup: {
+      type: Boolean,
+      default: false,
+    },
+    group: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Groups",
+      default: null,
     },
   },
   { timestamps: true }
