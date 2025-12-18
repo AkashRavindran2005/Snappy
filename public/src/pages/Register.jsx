@@ -6,6 +6,49 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { registerRoute } from "../utils/APIRoutes";
 
+// shared with Login.jsx
+function bufferToBase64(buffer) {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+}
+
+async function generateAndStoreKeypair(userId) {
+  const existingPriv = localStorage.getItem("e2ee_private_key");
+  const existingPub = localStorage.getItem("e2ee_public_key");
+  if (existingPriv && existingPub) return;
+
+  const keyPair = await window.crypto.subtle.generateKey(
+    {
+      name: "RSA-OAEP",
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: "SHA-256",
+    },
+    true,
+    ["encrypt", "decrypt"]
+  );
+
+  const publicKeySpki = await window.crypto.subtle.exportKey(
+    "spki",
+    keyPair.publicKey
+  );
+  const privateKeyPkcs8 = await window.crypto.subtle.exportKey(
+    "pkcs8",
+    keyPair.privateKey
+  );
+
+  const publicKeyBase64 = bufferToBase64(publicKeySpki);
+  const privateKeyBase64 = bufferToBase64(privateKeyPkcs8);
+
+  localStorage.setItem("e2ee_private_key", privateKeyBase64);
+  localStorage.setItem("e2ee_public_key", publicKeyBase64);
+
+  await fetch(`/api/auth/${userId}/public-key`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ publicKey: publicKeyBase64 }),
+  });
+}
+
 export default function Register() {
   const navigate = useNavigate();
   const [values, setValues] = useState({
@@ -36,7 +79,10 @@ export default function Register() {
   const handleValidation = () => {
     const { password, confirmPassword, username, email } = values;
     if (password !== confirmPassword) {
-      toast.error("Password and confirm password should be same.", toastOptions);
+      toast.error(
+        "Password and confirm password should be same.",
+        toastOptions
+      );
       return false;
     } else if (username.length < 3) {
       toast.error(
@@ -70,11 +116,20 @@ export default function Register() {
       if (data.status === false) {
         toast.error(data.msg, toastOptions);
       }
+
       if (data.status === true) {
         localStorage.setItem(
           process.env.REACT_APP_LOCALHOST_KEY,
           JSON.stringify(data.user)
         );
+
+        // generate keypair + upload public key for new user
+        try {
+          await generateAndStoreKeypair(data.user._id);
+        } catch (err) {
+          console.error("E2EE keypair generation failed", err);
+        }
+
         navigate("/");
       }
     }

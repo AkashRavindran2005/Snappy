@@ -3,11 +3,69 @@ import styled from "styled-components";
 import axios from "axios";
 import { BsThreeDots } from "react-icons/bs";
 import ChatInput from "./ChatInput";
-import {
-  sendMessageRoute,
-  recieveMessageRoute,
-} from "../utils/APIRoutes";
+import { sendMessageRoute, recieveMessageRoute } from "../utils/APIRoutes";
 import toast from "react-hot-toast";
+
+// helpers to (de)serialize keys
+function base64ToArrayBuffer(b64) {
+  const binary = atob(b64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function importPublicKey(base64) {
+  const spki = base64ToArrayBuffer(base64);
+  return window.crypto.subtle.importKey(
+    "spki",
+    spki,
+    { name: "RSA-OAEP", hash: "SHA-256" },
+    false,
+    ["encrypt"]
+  );
+}
+
+async function importPrivateKey(base64) {
+  const pkcs8 = base64ToArrayBuffer(base64);
+  return window.crypto.subtle.importKey(
+    "pkcs8",
+    pkcs8,
+    { name: "RSA-OAEP", hash: "SHA-256" },
+    false,
+    ["decrypt"]
+  );
+}
+
+async function encryptForUser(publicKeyBase64, plaintext) {
+  if (!publicKeyBase64) return plaintext; // fallback: no E2EE
+  const pubKey = await importPublicKey(publicKeyBase64);
+  const encoded = new TextEncoder().encode(plaintext);
+  const ciphertext = await window.crypto.subtle.encrypt(
+    { name: "RSA-OAEP" },
+    pubKey,
+    encoded
+  );
+  return btoa(String.fromCharCode(...new Uint8Array(ciphertext)));
+}
+
+async function decryptMyMessage(cipherBase64) {
+  const privateKeyBase64 = localStorage.getItem("e2ee_private_key");
+  if (!privateKeyBase64) return cipherBase64; // fallback
+  try {
+    const privKey = await importPrivateKey(privateKeyBase64);
+    const cipherBuf = base64ToArrayBuffer(cipherBase64);
+    const decrypted = await window.crypto.subtle.decrypt(
+      { name: "RSA-OAEP" },
+      privKey,
+      cipherBuf
+    );
+    return new TextDecoder().decode(decrypted);
+  } catch (e) {
+    console.error("decrypt error", e);
+    return cipherBase64;
+  }
+}
 
 export default function ChatContainer({ currentChat, socket, currentUser }) {
   const [messages, setMessages] = useState([]);
@@ -15,6 +73,7 @@ export default function ChatContainer({ currentChat, socket, currentUser }) {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef();
 
+  // load + decrypt history
   useEffect(() => {
     const fetchMessages = async () => {
       setIsLoading(true);
@@ -23,7 +82,17 @@ export default function ChatContainer({ currentChat, socket, currentUser }) {
           from: currentUser._id,
           to: currentChat._id,
         });
-        setMessages(response.data);
+
+        const decrypted = await Promise.all(
+          response.data.map(async (msg) => ({
+            ...msg,
+            message: msg.message
+              ? await decryptMyMessage(msg.message)
+              : "",
+          }))
+        );
+
+        setMessages(decrypted);
       } catch (error) {
         toast.error("Failed to load messages");
       } finally {
@@ -36,12 +105,16 @@ export default function ChatContainer({ currentChat, socket, currentUser }) {
     }
   }, [currentChat, currentUser._id]);
 
+  // incoming socket messages
   useEffect(() => {
     if (socket.current) {
-      socket.current.on("msg-recieve", (data) => {
+      socket.current.on("msg-recieve", async (data) => {
+        const decryptedText = data.msg
+          ? await decryptMyMessage(data.msg)
+          : "";
         setArrivalMessage({
           fromSelf: false,
-          message: data.msg || "",
+          message: decryptedText,
           mediaUrl: data.mediaUrl,
           mediaType: data.mediaType,
           timestamp: new Date(),
@@ -51,64 +124,76 @@ export default function ChatContainer({ currentChat, socket, currentUser }) {
   }, [socket]);
 
   useEffect(() => {
-    arrivalMessage && setMessages((prev) => [...prev, arrivalMessage]);
+    if (arrivalMessage) {
+      setMessages((prev) => [...prev, arrivalMessage]);
+    }
   }, [arrivalMessage]);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
- const handleSendMsg = async (message) => {
-  const mediaUrl = null;
-  const mediaType = null;
+  const handleSendMsg = async (plainText) => {
+    const mediaUrl = null;
+    const mediaType = null;
 
-  socket.current.emit("send-msg", {
-    to: currentChat._id,
-    from: currentUser._id,
-    msg: message,
-    mediaUrl,
-    mediaType,
-  });
+    // encrypt with recipient's public key if available
+    const recipientPublicKey = currentChat.publicKey || "";
+    let ciphertext = plainText;
+    try {
+      if (recipientPublicKey) {
+        ciphertext = await encryptForUser(recipientPublicKey, plainText);
+      }
+    } catch (e) {
+      console.error("encrypt error", e);
+    }
 
-  try {
-    await axios.post(sendMessageRoute, {
-      from: currentUser._id,
+    // send encrypted over socket
+    socket.current.emit("send-msg", {
       to: currentChat._id,
-      message,
+      from: currentUser._id,
+      msg: ciphertext,
       mediaUrl,
       mediaType,
     });
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        fromSelf: true,
-        message,
+    try {
+      // store encrypted in DB
+      await axios.post(sendMessageRoute, {
+        from: currentUser._id,
+        to: currentChat._id,
+        message: ciphertext,
         mediaUrl,
         mediaType,
-        timestamp: new Date(),
-      },
-    ]);
-  } catch (error) {
-    toast.error("Failed to send message");
-  }
-};
+      });
 
+      // show decrypted text in UI
+      setMessages((prev) => [
+        ...prev,
+        {
+          fromSelf: true,
+          message: plainText,
+          mediaUrl,
+          mediaType,
+          timestamp: new Date(),
+        },
+      ]);
+    } catch (error) {
+      toast.error("Failed to send message");
+    }
+  };
 
   return (
     <Container>
       <Header>
         <UserSection>
-          <UserAvatar
-            src={`data:image/svg+xml;base64,${currentChat.avatarImage}`}
-            alt={currentChat.username}
-          />
+          <UserAvatar src={`data:image/svg+xml;base64,${currentChat.avatarImage}`} />
           <UserDetails>
             <UserName>{currentChat.username}</UserName>
             <UserStatus>Active now</UserStatus>
           </UserDetails>
         </UserSection>
-        <BsThreeDots />
+        <BsThreeDots color="#9ca3af" size={20} />
       </Header>
 
       <MessagesContainer>
@@ -121,14 +206,18 @@ export default function ChatContainer({ currentChat, socket, currentUser }) {
           </EmptyState>
         ) : (
           messages.map((msg, idx) => (
-            <Message key={idx} isSent={msg.fromSelf}>
+            <Message
+              key={idx}
+              ref={idx === messages.length - 1 ? scrollRef : null}
+              isSent={msg.fromSelf}
+            >
               <MessageBubble isSent={msg.fromSelf}>
                 {msg.mediaUrl && (
                   <>
                     {msg.mediaType === "video" ? (
                       <MediaVideo src={msg.mediaUrl} controls />
                     ) : (
-                      <MediaImage src={msg.mediaUrl} alt="shared" />
+                      <MediaImage src={msg.mediaUrl} alt="media" />
                     )}
                   </>
                 )}
@@ -143,7 +232,6 @@ export default function ChatContainer({ currentChat, socket, currentUser }) {
             </Message>
           ))
         )}
-        <div ref={scrollRef} />
       </MessagesContainer>
 
       <ChatInput handleSendMsg={handleSendMsg} />
@@ -247,8 +335,9 @@ const MessageBubble = styled.div`
   padding: 0.75rem 1rem;
   border-radius: ${(props) =>
     props.isSent ? "1rem 1rem 0.25rem 1rem" : "1rem 1rem 1rem 0.25rem"};
-  border: 1px solid ${(props) =>
-    props.isSent ? "rgba(255, 255, 255, 0.1)" : "rgba(148, 163, 184, 0.2)"};
+  border: 1px solid
+    ${(props) =>
+      props.isSent ? "rgba(255, 255, 255, 0.1)" : "rgba(148, 163, 184, 0.2)"};
 
   @media (max-width: 768px) {
     max-width: 85%;

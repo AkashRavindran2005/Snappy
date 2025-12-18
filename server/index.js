@@ -8,7 +8,7 @@ require("dotenv").config();
 const authRoutes = require("./routes/auth");
 const messageRoutes = require("./routes/messages");
 const friendRoutes = require("./routes/friends");
-const groupRoutes = require("./routes/groups"); // NEW
+const groupRoutes = require("./routes/groups");
 
 const app = express();
 
@@ -44,9 +44,9 @@ app.get("/ping", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/friends", friendRoutes);
-app.use("/api/groups", groupRoutes); // NEW
+app.use("/api/groups", groupRoutes);
 
-// Global error handler (optional but recommended)
+// Global error handler
 app.use((err, _req, res, _next) => {
   console.error(err);
   res.status(500).json({ error: "Internal server error" });
@@ -86,7 +86,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  // NEW: group messages – broadcast to all member userIds in data.members
+  // group messages – broadcast to all member userIds in data.members
   socket.on("send-group-msg", (data) => {
     const { groupId, members, msg, mediaUrl, mediaType, from } = data;
     if (!Array.isArray(members)) return;

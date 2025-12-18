@@ -28,8 +28,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-
-    // NEW: friends system
+    // friends system
     friends: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -39,15 +38,19 @@ const userSchema = new mongoose.Schema(
     incomingRequests: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Users", 
+        ref: "Users",
       },
     ],
     outgoingRequests: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Users", 
+        ref: "Users",
       },
     ],
+    publicKey: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );
