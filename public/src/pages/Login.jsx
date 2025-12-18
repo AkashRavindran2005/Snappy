@@ -68,7 +68,7 @@ export default function Login() {
           <Brand>
             <div className="logo">
               <svg viewBox="0 0 50 50" width="60" height="60">
-                <circle cx="25" cy="25" r="23" fill="#25D366" />
+                <circle cx="25" cy="25" r="23" fill="#8B5CF6" />
                 <path
                   d="M25 10c-8.284 0-15 6.716-15 15 0 2.61.67 5.065 1.845 7.2L10 40l8.035-1.82A14.943 14.943 0 0025 40c8.284 0 15-6.716 15-15s-6.716-15-15-15zm8.5 20.5l-2.5 2.5c-1 1-3 .5-5.5-1.5s-4-4-5-5.5-1.5-3.5-.5-4.5l2-2c.5-.5.5-1.5 0-3s-1.5-3-2-3.5-1.5-.5-2 0c-2 2-2 4.5 0 8s5 7 8.5 8.5 6.5.5 8.5-1.5c.5-.5.5-1.5 0-2s-2-1.5-3.5-2-2.5-.5-3 0z"
                   fill="white"
@@ -107,19 +107,19 @@ export default function Login() {
 const Outer = styled.div`
   height: 100vh;
   width: 100vw;
-  background: #0b141a;
+  background: #050816;
   display: flex;
   align-items: center;
   justify-content: center;
 `;
 
 const Card = styled.div`
-  background: #111b21;
+  background: #050b1b;
   border-radius: 1.2rem;
   padding: 3rem 4rem;
   min-width: 380px;
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
-  border: 1px solid #202c33;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.6);
+  border: 1px solid #111827;
 
   @media (max-width: 720px) {
     min-width: 90vw;
@@ -133,28 +133,28 @@ const Card = styled.div`
   }
 
   input {
-    background-color: #202c33;
+    background-color: #0f172a;
     padding: 0.9rem 1rem;
     border-radius: 0.5rem;
     border: 1px solid transparent;
-    color: #e9edef;
+    color: #e5e7eb;
     font-size: 0.95rem;
     transition: all 0.2s ease;
 
     &:focus {
       outline: none;
-      border-color: #25d366;
-      background-color: #111b21;
+      border-color: #8b5cf6;
+      background-color: #020617;
     }
 
     &::placeholder {
-      color: #8696a0;
+      color: #6b7280;
     }
   }
 
   button {
     margin-top: 0.4rem;
-    background-color: #25d366;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
     color: #ffffff;
     padding: 0.9rem 1.2rem;
     border-radius: 999px;
@@ -167,8 +167,8 @@ const Card = styled.div`
     transition: all 0.2s ease;
 
     &:hover {
-      background-color: #20bd5a;
-      box-shadow: 0 4px 16px rgba(37, 211, 102, 0.35);
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.5);
       transform: translateY(-1px);
     }
   }
@@ -176,17 +176,17 @@ const Card = styled.div`
   span {
     margin-top: 0.4rem;
     font-size: 0.85rem;
-    color: #8696a0;
+    color: #9ca3af;
     text-align: center;
 
     a {
-      color: #25d366;
+      color: #a855f7;
       font-weight: 600;
       text-decoration: none;
 
       &:hover {
         text-decoration: underline;
-        color: #20bd5a;
+        color: #c084fc;
       }
     }
   }
@@ -200,7 +200,7 @@ const Brand = styled.div`
   margin-bottom: 1.8rem;
 
   h1 {
-    color: #e9edef;
+    color: #e5e7eb;
     text-transform: uppercase;
     font-size: 1.6rem;
     letter-spacing: 0.15rem;
@@ -208,7 +208,7 @@ const Brand = styled.div`
   }
 
   p {
-    color: #8696a0;
+    color: #9ca3af;
     font-size: 0.9rem;
     margin: 0;
   }
