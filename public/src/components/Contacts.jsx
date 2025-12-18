@@ -7,12 +7,15 @@ export default function Contacts({ contacts, changeChat }) {
   const [currentUserImage, setCurrentUserImage] = useState(undefined);
   const [currentSelected, setCurrentSelected] = useState(undefined);
 
-  useEffect(async () => {
-    const data = await JSON.parse(
-      localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
-    );
-    setCurrentUserName(data.username);
-    setCurrentUserImage(data.avatarImage);
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const data = await JSON.parse(
+        localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
+      );
+      setCurrentUserName(data.username);
+      setCurrentUserImage(data.avatarImage);
+    };
+    fetchUserData();
   }, []);
 
   const changeCurrentChat = (index, contact) => {
@@ -22,7 +25,7 @@ export default function Contacts({ contacts, changeChat }) {
 
   return (
     <>
-      {currentUserImage && currentUserImage && (
+      {currentUserImage && currentUserName && (
         <Container>
           <div className="brand">
             <h2>Messages</h2>
@@ -47,9 +50,15 @@ export default function Contacts({ contacts, changeChat }) {
                   <div className="contact-info">
                     <div className="username">
                       <h3>{contact.username}</h3>
-                      <span className="time">12:30 PM</span>
+                      <span className="time">
+                        {new Date().toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit',
+                          hour12: true 
+                        })}
+                      </span>
                     </div>
-                    <p className="last-message">Hey! How are you doing?</p>
+                    <p className="last-message">Tap to view messages</p>
                   </div>
                 </div>
               );

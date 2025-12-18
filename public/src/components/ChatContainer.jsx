@@ -12,15 +12,18 @@ export default function ChatContainer({ currentChat, socket }) {
   const scrollRef = useRef();
   const [arrivalMessage, setArrivalMessage] = useState(null);
 
-  useEffect(async () => {
-    const data = await JSON.parse(
-      localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
-    );
-    const response = await axios.post(recieveMessageRoute, {
-      from: data._id,
-      to: currentChat._id,
-    });
-    setMessages(response.data);
+  useEffect(() => {
+    const fetchMessages = async () => {
+      const data = await JSON.parse(
+        localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
+      );
+      const response = await axios.post(recieveMessageRoute, {
+        from: data._id,
+        to: currentChat._id,
+      });
+      setMessages(response.data);
+    };
+    fetchMessages();
   }, [currentChat]);
 
   useEffect(() => {
@@ -69,6 +72,11 @@ export default function ChatContainer({ currentChat, socket }) {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Helper function to check if message contains a file
+  const isFileMessage = (message) => {
+    return message.includes('[File:');
+  };
+
   return (
     <Container>
       <div className="chat-header">
@@ -100,7 +108,13 @@ export default function ChatContainer({ currentChat, socket }) {
                 }`}
               >
                 <div className="content">
-                  <p>{message.message}</p>
+                  {isFileMessage(message.message) ? (
+                    <div className="file-message">
+                      <p className="file-indicator">📎 {message.message}</p>
+                    </div>
+                  ) : (
+                    <p>{message.message}</p>
+                  )}
                   <span className="time">
                     {new Date().toLocaleTimeString('en-US', { 
                       hour: '2-digit', 
@@ -227,6 +241,13 @@ const Container = styled.div`
           color: #E9EDEF;
           line-height: 1.4;
           padding-right: 4rem;
+        }
+
+        .file-message {
+          .file-indicator {
+            color: #25D366;
+            font-size: 0.9rem;
+          }
         }
 
         .time {
