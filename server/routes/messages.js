@@ -6,11 +6,9 @@ const {
   uploadMedia,
 } = require("../controllers/messageController");
 
-const router = express.Router();
-
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = [
       "image/jpeg",
@@ -23,6 +21,8 @@ const upload = multer({
     return cb(new Error("Invalid file type"));
   },
 });
+
+const router = express.Router();
 
 router.post("/addmsg", addMessage);
 router.post("/getmsg", getMessages);

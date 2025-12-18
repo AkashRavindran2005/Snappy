@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import styled from "styled-components";
 import { BsEmojiSmileFill } from "react-icons/bs";
 import { IoMdSend } from "react-icons/io";
@@ -6,17 +6,17 @@ import Picker from "emoji-picker-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 
-export default function ChatInput({ onSendMsg }) {
+export default function ChatInput({ handleSendMsg, onSendMsg }) {
+  const sendFn = onSendMsg || ((d) => handleSendMsg && handleSendMsg(d));
   const [msg, setMsg] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
 
-  const toggleEmojiPicker = () => {
-    setShowEmojiPicker((prev) => !prev);
-  };
+  const toggleEmojiPicker = () => setShowEmojiPicker((prev) => !prev);
 
-  const handleEmojiClick = (_event, emojiObject) => {
+  const handleEmojiClick = (_e, emojiObject) => {
     setMsg((prev) => prev + (emojiObject?.emoji || ""));
   };
 
@@ -53,7 +53,7 @@ export default function ChatInput({ onSendMsg }) {
     event.preventDefault();
     if (!msg.trim() && !selectedFile) return;
 
-    onSendMsg({
+    sendFn({
       message: msg,
       mediaUrl: selectedFile?.url || null,
       mediaType: selectedFile?.type || null,
@@ -75,29 +75,32 @@ export default function ChatInput({ onSendMsg }) {
         </SelectedMediaBar>
       )}
 
-      <Form onSubmit={sendChat}>
-        <ButtonContainer>
-          <EmojiWrapper>
+      <div className="content">
+        <div className="button-container">
+          <div className="emoji">
             <BsEmojiSmileFill onClick={toggleEmojiPicker} />
             {showEmojiPicker && (
-              <EmojiPickerWrapper>
-                <Picker onEmojiClick={handleEmojiClick} disableSearchBar={true} />
-              </EmojiPickerWrapper>
+              <div className="emoji-picker-react-wrapper">
+                <Picker onEmojiClick={handleEmojiClick} disableSearchBar disableSkinTonePicker />
+              </div>
             )}
-          </EmojiWrapper>
-        </ButtonContainer>
+          </div>
+        </div>
 
-        <InputContainer>
+        <form className="input-container" onSubmit={sendChat}>
+          <label
+            className={`attach ${uploading ? "disabled" : ""}`}
+            onClick={() => !uploading && fileRef.current?.click()}
+          >
+            📎
+          </label>
           <input
+            ref={fileRef}
             type="file"
-            id="chat-file-input"
             hidden
             accept="image/*,video/*"
             onChange={(e) => handleMediaUpload(e.target.files?.[0])}
           />
-          <AttachLabel htmlFor="chat-file-input" disabled={uploading}>
-            📎
-          </AttachLabel>
 
           <input
             type="text"
@@ -108,112 +111,124 @@ export default function ChatInput({ onSendMsg }) {
           <button type="submit">
             <IoMdSend />
           </button>
-        </InputContainer>
-      </Form>
+        </form>
+      </div>
     </Container>
   );
 }
 
 const Container = styled.div`
-  display: grid;
-  align-items: center;
-  grid-template-columns: 100%;
-  background-color: #020617;
-  padding: 0.75rem 1.5rem;
-`;
-
-const Form = styled.form`
-  display: grid;
-  grid-template-columns: 5% 95%;
-  align-items: center;
-  width: 100%;
-`;
-
-const ButtonContainer = styled.div`
   display: flex;
-  align-items: center;
-  color: white;
-  gap: 1rem;
-`;
+  flex-direction: column;
+  background-color: #080420;
+  padding: 0 2rem 1rem 2rem;
 
-const EmojiWrapper = styled.div`
-  position: relative;
-  svg {
-    font-size: 1.5rem;
-    color: #facc15;
-    cursor: pointer;
+  @media screen and (min-width: 720px) and (max-width: 1080px) {
+    padding: 0 1rem 1rem 1rem;
   }
-`;
 
-const EmojiPickerWrapper = styled.div`
-  position: absolute;
-  bottom: 150%;
-  left: 0;
-  z-index: 100;
-  .emoji-picker-react {
-    background-color: #020617;
-    box-shadow: 0 5px 15px rgba(15, 23, 42, 0.8);
-    border-color: #4f46e5;
+  .content {
+    display: grid;
+    grid-template-columns: 5% 95%;
+    align-items: center;
   }
-`;
 
-const InputContainer = styled.div`
-  width: 100%;
-  border-radius: 2rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background-color: #020617;
-  border: 1px solid #1f2937;
-  padding: 0.4rem 0.8rem;
+  .button-container {
+    display: flex;
+    align-items: center;
+    color: white;
+    gap: 1rem;
 
-  input[type="text"] {
-    flex: 1;
-    background-color: transparent;
-    border: none;
-    color: #e5e7eb;
-    font-size: 0.95rem;
-    padding-left: 0.2rem;
+    .emoji {
+      position: relative;
+      svg {
+        font-size: 1.5rem;
+        color: #ffff00c8;
+        cursor: pointer;
+      }
 
-    &::placeholder {
-      color: #6b7280;
-    }
+      .emoji-picker-react-wrapper {
+        position: absolute;
+        bottom: 150%;
+        left: 0;
+        z-index: 100;
 
-    &:focus {
-      outline: none;
+        .emoji-picker-react {
+          background-color: #080420;
+          box-shadow: 0 5px 10px #9a86f3;
+          border-color: #9a86f3;
+        }
+      }
     }
   }
 
-  button {
-    padding: 0.4rem 0.9rem;
+  .input-container {
+    width: 100%;
     border-radius: 2rem;
     display: flex;
-    justify-content: center;
     align-items: center;
-    background-color: #4f46e5;
-    border: none;
-    cursor: pointer;
+    gap: 1rem;
+    background-color: #ffffff34;
+    padding: 0.3rem 1rem;
 
-    svg {
+    .attach {
+      cursor: pointer;
       font-size: 1.2rem;
+      &.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background-color: transparent;
       color: white;
+      border: none;
+      font-size: 1.1rem;
+      &::selection {
+        background-color: #9a86f3;
+      }
+      &::placeholder {
+        color: #d1d5db;
+      }
+      &:focus {
+        outline: none;
+      }
+    }
+
+    button {
+      padding: 0.3rem 2rem;
+      border-radius: 2rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #9a86f3;
+      border: none;
+      cursor: pointer;
+
+      svg {
+        font-size: 1.3rem;
+        color: white;
+      }
+
+      @media screen and (min-width: 720px) and (max-width: 1080px) {
+        padding: 0.3rem 1rem;
+        svg {
+          font-size: 1rem;
+        }
+      }
     }
   }
-`;
-
-const AttachLabel = styled.label`
-  cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
-  opacity: ${({ disabled }) => (disabled ? 0.5 : 1)};
-  font-size: 1.1rem;
 `;
 
 const SelectedMediaBar = styled.div`
-  grid-column: 1 / -1;
+  width: 100%;
   margin-bottom: 0.4rem;
-  padding: 0.4rem 0.75rem;
-  background: rgba(37, 99, 235, 0.25);
+  padding: 0.4rem 0.8rem;
+  background: rgba(129, 140, 248, 0.15);
   border-radius: 0.5rem;
-  border: 1px solid rgba(59, 130, 246, 0.7);
+  border: 1px solid rgba(129, 140, 248, 0.7);
   color: #e5e7eb;
   display: flex;
   justify-content: space-between;
@@ -224,6 +239,6 @@ const RemoveBtn = styled.button`
   background: none;
   border: none;
   color: #e5e7eb;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   cursor: pointer;
 `;
