@@ -136,6 +136,7 @@ export default function ChatContainer({ currentChat, socket, currentUser }) {
   const handleSendMsg = async (plainText) => {
     const mediaUrl = null;
     const mediaType = null;
+    console.log("SENDING", { plainText, ciphertext });
 
     // encrypt with recipient's public key if available
     const recipientPublicKey = currentChat.publicKey || "";
