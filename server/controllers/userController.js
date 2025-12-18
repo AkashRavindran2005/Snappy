@@ -86,7 +86,6 @@ module.exports.logOut = (req, res, next) => {
   }
 };
 
-// NEW: get user by username for friend-requests
 module.exports.getUserByUsername = async (req, res, next) => {
   try {
     const { username } = req.query;
@@ -106,3 +105,4 @@ module.exports.getUserByUsername = async (req, res, next) => {
     next(ex);
   }
 };
+
