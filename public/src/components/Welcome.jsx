@@ -74,9 +74,7 @@ export default function Welcome() {
           </div>
         </div>
 
-        <div className="tips">
-          <p>💡 Tip: Click on a contact from the sidebar to start chatting</p>
-        </div>
+  
       </div>
     </Container>
   );
@@ -226,20 +224,6 @@ const Container = styled.div`
             color: #25D366;
           }
         }
-      }
-    }
-
-    .tips {
-      margin-top: 2rem;
-      padding: 1rem 1.5rem;
-      background-color: rgba(37, 211, 102, 0.1);
-      border-left: 3px solid #25D366;
-      border-radius: 0.5rem;
-
-      p {
-        color: #8696A0;
-        font-size: 0.9rem;
-        margin: 0;
       }
     }
   }
