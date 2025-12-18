@@ -36,7 +36,6 @@ export default function ChatInput({ handleSendMsg }) {
     if (file) {
       setSelectedFile(file);
       
-      // Create preview for images
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onloadend = () => {
