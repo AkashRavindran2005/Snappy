@@ -36,7 +36,7 @@ export default function Contacts({ contacts, changeChat, currentUser }) {
       <Header>
         <BrandSection>
           <BrandIcon>💬</BrandIcon>
-          <BrandText>SecureChat</BrandText>
+          <BrandText>Snappy</BrandText>
         </BrandSection>
       </Header>
 

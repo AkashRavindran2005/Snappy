@@ -23,7 +23,7 @@ export default function ChatInput({ onSendMsg }) {
       const formData = new FormData();
       formData.append("media", file);
 
-      const response = await axios.post(
+      const { data } = await axios.post(
         `${process.env.REACT_APP_API_URL}/api/messages/upload-media`,
         formData,
         {
@@ -32,8 +32,8 @@ export default function ChatInput({ onSendMsg }) {
       );
 
       setSelectedFile({
-        url: response.data.mediaUrl,
-        type: response.data.mediaType,
+        url: data.mediaUrl,
+        type: data.mediaType,
         name: file.name,
       });
       toast.success("Media uploaded");
@@ -47,17 +47,19 @@ export default function ChatInput({ onSendMsg }) {
 
   const handleSend = () => {
     if (!msg.trim() && !selectedFile) return;
+
     onSendMsg({
       message: msg,
       mediaUrl: selectedFile?.url || null,
       mediaType: selectedFile?.type || null,
     });
+
     setMsg("");
     setSelectedFile(null);
+    setShowEmoji(false);
   };
 
-  const handleEmojiClick = (emojiData) => {
-    // emoji-picker-react v4: onEmojiClick gives (emojiData, event)
+  const handleEmojiClick = (emojiData, event) => {
     setMsg((prev) => prev + (emojiData?.emoji || ""));
   };
 
@@ -65,14 +67,14 @@ export default function ChatInput({ onSendMsg }) {
     <Container>
       {selectedFile && (
         <SelectedMediaPreview>
-          <PreviewLabel>
+          <PreviewText>
             {selectedFile.type === "video" ? "📹 Video attached" : "📷 Image attached"}
-          </PreviewLabel>
+          </PreviewText>
           <RemoveButton onClick={() => setSelectedFile(null)}>×</RemoveButton>
         </SelectedMediaPreview>
       )}
 
-      <InputWrapper>
+      <InputRow>
         <IconButton
           type="button"
           onClick={() => fileInputRef.current?.click()}
@@ -82,40 +84,46 @@ export default function ChatInput({ onSendMsg }) {
           <BsPaperclip />
         </IconButton>
 
-        <input
+        <HiddenFileInput
           ref={fileInputRef}
           type="file"
-          hidden
           onChange={(e) => e.target.files?.[0] && handleMediaUpload(e.target.files[0])}
           accept="image/*,video/*"
         />
 
-        <MessageInput
-          type="text"
-          placeholder="Type your message..."
-          value={msg}
-          onChange={(e) => setMsg(e.target.value)}
-          onKeyPress={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-        />
+        <InputWrapper>
+          <MessageInput
+            type="text"
+            placeholder="Type your message..."
+            value={msg}
+            onChange={(e) => setMsg(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+          />
+
+          {showEmoji && (
+            <EmojiPickerWrapper>
+              <EmojiPicker
+                onEmojiClick={handleEmojiClick}
+                theme="dark"
+                searchDisabled
+                skinTonesDisabled
+              />
+            </EmojiPickerWrapper>
+          )}
+        </InputWrapper>
 
         <IconButton
           type="button"
-          onClick={() => setShowEmoji(!showEmoji)}
+          onClick={() => setShowEmoji((v) => !v)}
           title="Emoji"
         >
           <BsEmojiSmileFill />
         </IconButton>
-
-        {showEmoji && (
-          <EmojiPickerWrapper>
-            <EmojiPicker onEmojiClick={handleEmojiClick} />
-          </EmojiPickerWrapper>
-        )}
 
         <SendButton
           type="button"
@@ -125,56 +133,41 @@ export default function ChatInput({ onSendMsg }) {
         >
           <BsSend />
         </SendButton>
-      </InputWrapper>
+      </InputRow>
     </Container>
   );
 }
 
 const Container = styled.div`
-  padding: 1rem;
-  background: rgba(15, 23, 42, 0.5);
-  border-top: 1px solid rgba(148, 163, 184, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  padding: 0.9rem 1.25rem;
+  background: rgba(15, 23, 42, 0.95);
+  border-top: 1px solid rgba(15, 23, 42, 1);
 `;
 
-const InputWrapper = styled.div`
+const InputRow = styled.div`
   display: flex;
   align-items: flex-end;
   gap: 0.75rem;
   position: relative;
 `;
 
-const IconButton = styled.button`
-  background: none;
-  border: none;
-  color: #667eea;
-  font-size: 1.25rem;
-  cursor: pointer;
-  padding: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+const InputWrapper = styled.div`
+  position: relative;
+  flex: 1;
+`;
 
-  &:hover:not(:disabled) {
-    color: #764ba2;
-    transform: scale(1.05);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+const HiddenFileInput = styled.input`
+  display: none;
 `;
 
 const MessageInput = styled.input`
-  flex: 1;
-  padding: 0.75rem 1rem;
-  background: rgba(30, 41, 59, 0.8);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  width: 100%;
+  padding: 0.8rem 1rem;
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(51, 65, 85, 0.9);
   border-radius: 0.75rem;
   color: #e2e8f0;
-  font-size: 0.95rem;
+  font-size: 0.94rem;
   font-family: inherit;
 
   &::placeholder {
@@ -183,27 +176,28 @@ const MessageInput = styled.input`
 
   &:focus {
     outline: none;
-    background: rgba(30, 41, 59, 0.95);
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #6366f1;
+    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.6);
   }
 `;
 
-const SendButton = styled.button`
-  padding: 0.75rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-  color: white;
-  border-radius: 0.75rem;
+const IconButton = styled.button`
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(51, 65, 85, 0.9);
+  color: #c7d2fe;
+  font-size: 1.15rem;
   cursor: pointer;
-  font-size: 1.1rem;
+  padding: 0.6rem;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.15s ease;
 
   &:hover:not(:disabled) {
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    transform: translateY(-2px);
+    background: rgba(51, 65, 85, 1);
+    color: #e5e7eb;
+    transform: translateY(-1px);
   }
 
   &:disabled {
@@ -212,43 +206,82 @@ const SendButton = styled.button`
   }
 `;
 
-const SelectedMediaPreview = styled.div`
-  padding: 0.75rem;
-  background: rgba(102, 126, 234, 0.15);
-  border: 1px solid rgba(102, 126, 234, 0.3);
-  border-radius: 0.5rem;
+const SendButton = styled.button`
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+  color: white;
+  font-size: 1.1rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
-  color: #667eea;
-  font-size: 0.9rem;
+  justify-content: center;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 8px 18px rgba(79, 70, 229, 0.45);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
 `;
 
-const PreviewLabel = styled.span``;
+const SelectedMediaPreview = styled.div`
+  margin-bottom: 0.55rem;
+  padding: 0.55rem 0.8rem;
+  background: rgba(30, 64, 175, 0.25);
+  border-radius: 0.55rem;
+  border: 1px solid rgba(129, 140, 248, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #e0e7ff;
+  font-size: 0.86rem;
+`;
+
+const PreviewText = styled.span`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
 
 const RemoveButton = styled.button`
-  background: none;
   border: none;
-  color: #667eea;
-  font-size: 1.5rem;
+  background: transparent;
+  color: #e0e7ff;
+  font-size: 1.25rem;
   cursor: pointer;
+  padding: 0 0 0 0.35rem;
 
   &:hover {
-    color: #764ba2;
-    transform: scale(1.1);
+    color: #fecaca;
   }
 `;
 
 const EmojiPickerWrapper = styled.div`
   position: absolute;
-  bottom: 100%;
+  bottom: 110%;
   right: 0;
-  z-index: 1000;
-  margin-bottom: 0.5rem;
+  z-index: 50;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.8);
+  border-radius: 0.75rem;
+  overflow: hidden;
 
-  .emoji-picker-react {
-    background: #0f172a !important;
-    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+  .EmojiPickerReact {
+    --epr-bg-color: #020617;
+    --epr-category-label-bg-color: #020617;
+    --epr-category-navigation-color: #e5e7eb;
+    --epr-search-input-bg-color: #020617;
+    --epr-search-input-text-color: #e5e7eb;
+    --epr-hover-bg-color: #111827;
+    --epr-focus-bg-color: #1e293b;
+    --epr-skin-tone-picker-menu-bg-color: #020617;
+    border: 1px solid rgba(31, 41, 55, 0.9);
   }
 `;
