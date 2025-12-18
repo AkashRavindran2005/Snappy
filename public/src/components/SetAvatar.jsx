@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import axios from "axios";
-import { Buffer } from "buffer";
 import loader from "../assets/loader.gif";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -9,7 +8,6 @@ import { useNavigate } from "react-router-dom";
 import { setAvatarRoute } from "../utils/APIRoutes";
 
 export default function SetAvatar() {
-  const api = `https://api.multiavatar.com/4645646`;
   const navigate = useNavigate();
   const [avatars, setAvatars] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,10 +21,14 @@ export default function SetAvatar() {
     theme: "dark",
   };
 
-  useEffect(async () => {
-    if (!localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY))
-      navigate("/login");
-  }, []);
+  useEffect(() => {
+    const checkUser = async () => {
+      if (!localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)) {
+        navigate("/login");
+      }
+    };
+    checkUser();
+  }, [navigate]);
 
   const setProfilePicture = async () => {
     if (selectedAvatar === undefined) {
@@ -54,24 +56,42 @@ export default function SetAvatar() {
     }
   };
 
-  useEffect(async () => {
-    const data = [];
-    for (let i = 0; i < 4; i++) {
-      const image = await axios.get(
-        `${api}/${Math.round(Math.random() * 1000)}`
-      );
-      const buffer = new Buffer(image.data);
-      data.push(buffer.toString("base64"));
-    }
-    setAvatars(data);
-    setIsLoading(false);
+  useEffect(() => {
+    const fetchAvatars = async () => {
+      const data = [];
+      const styles = ['avataaars', 'bottts', 'personas', 'initials'];
+      
+      for (let i = 0; i < 4; i++) {
+        try {
+          const seed = Math.random().toString(36).substring(7);
+          const style = styles[i];
+          const avatarUrl = `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
+          
+          const image = await axios.get(avatarUrl);
+          const base64 = btoa(unescape(encodeURIComponent(image.data)));
+          data.push(base64);
+        } catch (error) {
+          console.error("Error fetching avatar:", error);
+          // Fallback to a simple colored circle if fetch fails
+          const fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="50" fill="#${Math.floor(Math.random()*16777215).toString(16)}"/></svg>`;
+          const base64 = btoa(fallbackSvg);
+          data.push(base64);
+        }
+      }
+      setAvatars(data);
+      setIsLoading(false);
+    };
+    fetchAvatars();
   }, []);
 
   return (
     <>
       {isLoading ? (
         <Container>
-          <img src={loader} alt="loader" className="loader" />
+          <div className="loader-container">
+            <img src={loader} alt="loader" className="loader" />
+            <p>Loading avatars...</p>
+          </div>
         </Container>
       ) : (
         <Container>
@@ -86,12 +106,15 @@ export default function SetAvatar() {
                   className={`avatar ${
                     selectedAvatar === index ? "selected" : ""
                   }`}
-                  key={avatar}
+                  key={index}
                 >
                   <img
                     src={`data:image/svg+xml;base64,${avatar}`}
-                    alt="avatar"
+                    alt={`avatar-${index}`}
                     onClick={() => setSelectedAvatar(index)}
+                    onError={(e) => {
+                      e.target.src = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI1MCIgZmlsbD0iIzI1RDM2NiIvPjwvc3ZnPg==`;
+                    }}
                   />
                 </div>
               );
@@ -99,6 +122,9 @@ export default function SetAvatar() {
           </div>
           <button onClick={setProfilePicture} className="submit-btn">
             Continue
+          </button>
+          <button onClick={() => window.location.reload()} className="refresh-btn">
+            Refresh Avatars
           </button>
           <ToastContainer />
         </Container>
@@ -112,13 +138,26 @@ const Container = styled.div`
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  gap: 3rem;
+  gap: 2rem;
   background: linear-gradient(135deg, #0B141A 0%, #111B21 100%);
   height: 100vh;
   width: 100vw;
+  padding: 2rem;
 
-  .loader {
-    max-inline-size: 100%;
+  .loader-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+
+    .loader {
+      max-width: 100px;
+    }
+
+    p {
+      color: #8696A0;
+      font-size: 1rem;
+    }
   }
 
   .title-container {
@@ -129,6 +168,10 @@ const Container = styled.div`
       font-size: 2rem;
       font-weight: 600;
       margin-bottom: 0.5rem;
+
+      @media screen and (max-width: 720px) {
+        font-size: 1.5rem;
+      }
     }
 
     p {
@@ -140,6 +183,9 @@ const Container = styled.div`
   .avatars {
     display: flex;
     gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 600px;
 
     @media screen and (max-width: 720px) {
       gap: 1rem;
@@ -154,16 +200,18 @@ const Container = styled.div`
       align-items: center;
       transition: all 0.3s ease;
       cursor: pointer;
+      background-color: #202C33;
 
       img {
         height: 6rem;
         width: 6rem;
         border-radius: 50%;
         transition: all 0.3s ease;
+        object-fit: cover;
 
         @media screen and (max-width: 720px) {
-          height: 4rem;
-          width: 4rem;
+          height: 4.5rem;
+          width: 4.5rem;
         }
       }
 
@@ -176,6 +224,7 @@ const Container = styled.div`
     .selected {
       border: 4px solid #25D366;
       box-shadow: 0 0 20px rgba(37, 211, 102, 0.4);
+      background-color: #2A3942;
     }
   }
 
@@ -196,6 +245,36 @@ const Container = styled.div`
       background-color: #20BD5A;
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+    }
+
+    @media screen and (max-width: 720px) {
+      padding: 0.8rem 2rem;
+      font-size: 0.9rem;
+    }
+  }
+
+  .refresh-btn {
+    background-color: transparent;
+    color: #8696A0;
+    padding: 0.8rem 2rem;
+    border: 2px solid #8696A0;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background-color: #2A3942;
+      color: #E9EDEF;
+      border-color: #E9EDEF;
+    }
+
+    @media screen and (max-width: 720px) {
+      padding: 0.6rem 1.5rem;
+      font-size: 0.8rem;
     }
   }
 `;
